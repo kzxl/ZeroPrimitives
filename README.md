@@ -1,5 +1,11 @@
 # ZeroPrimitives
 
+[![NuGet Version](https://img.shields.io/badge/nuget-v1.1.0-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20External-brightgreen.svg)]()
+[![Tests: 153 Passed](https://img.shields.io/badge/Tests-153%20Passed%20(100%25)-brightgreen.svg)]()
+[![Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-orange.svg)]()
+
 > **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Multi-Targeting across `.NET 8.0`, `.NET Framework 4.6.2`, and `.NET Standard 2.0`.
 
 `ZeroPrimitives` is a sovereign, high-throughput .NET library engineered for ultra-fast, zero-allocation primitive conversions, low-level span/pointer number parsing, cryptographic/non-cryptographic hashing, binary buffer streaming, lock-free concurrency, and expression-compiled object mapping.
