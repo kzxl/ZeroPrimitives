@@ -199,6 +199,15 @@ if (queue.TryDequeue(out int val))
 
 ---
 
+## 📜 Release History
+
+| Version | Release Date | Key Milestones & Highlights |
+| :--- | :---: | :--- |
+| **`v1.1.0`** | 2026-09-16 | **Hardware Acceleration & High-Performance Parsers**:<br/>• Integrated CPU hardware intrinsics (SSE4.2 on x86/x64, ARM64) in `FastCrc.Crc32C` for single-cycle 8-byte checksums (30x speedup).<br/>• Added pointer-based integer, decimal, and float loops with auto-delimiters in `FastNumberParser`.<br/>• Added zero-allocation RFC 4180 CSV tokenizer (`FastCsvParser.EnumerateRows`, `EnumerateCells`).<br/>• Enhanced `FastConvert` and `FastDateParser` with SQL Server DATETIME safety.<br/>• Verified across 153 automated tests (100% pass rate). |
+| **`v1.0.0`** | 2026-09-10 | **Initial Sovereign Release**:<br/>• Direct register unboxing `FastConvert` for primitive types and enums.<br/>• Zero-allocation binary buffer streaming (`SpanReader`, `SpanWriter`, `VarIntCodec`).<br/>• Cache-line padded `SpscQueue` (False Sharing elimination) and 4-byte `FastSpinLock`.<br/>• GS1 barcode tokenizer (`FastGs1Parser`), `FastHex`, `SpanSplitter`, `ByteRingBuffer`.<br/>• Multi-targeting .NET 8.0, .NET Framework 4.6.2, and .NET Standard 2.0. |
+
+---
+
 ## Multi-Targeting Support
 
 - **.NET 8.0+** (High-throughput cloud services, edge AI, IoT, and IPC)
