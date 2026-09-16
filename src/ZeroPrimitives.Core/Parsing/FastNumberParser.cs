@@ -528,5 +528,142 @@ namespace ZeroPrimitives.Parsing
             decimalSep = '\0';
             thousandSep = '\0';
         }
+
+        #region ReadOnlySpan<byte> Overloads
+
+        /// <summary>
+        /// Parses a 32-bit integer directly from a UTF-8 ReadOnlySpan of bytes without string or char array allocations.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe bool TryParseInt32(ReadOnlySpan<byte> span, out int result)
+        {
+            result = 0;
+            if (span.IsEmpty) return false;
+
+            fixed (byte* p = span)
+            {
+                byte* ptr = p;
+                byte* end = p + span.Length;
+
+                while (ptr < end && (*ptr == (byte)' ' || *ptr == (byte)'\t')) ptr++;
+                while (end > ptr && (*(end - 1) == (byte)' ' || *(end - 1) == (byte)'\t')) end--;
+
+                if (ptr >= end) return false;
+
+                bool neg = false;
+                if (*ptr == (byte)'-') { neg = true; ptr++; }
+                else if (*ptr == (byte)'+') { ptr++; }
+
+                if (ptr >= end) return false;
+
+                long acc = 0;
+                while (ptr < end)
+                {
+                    byte b = *ptr++;
+                    if (b < (byte)'0' || b > (byte)'9') return false;
+                    acc = (acc * 10) + (b - (byte)'0');
+                    if (acc > (long)int.MaxValue + (neg ? 1 : 0)) return false;
+                }
+
+                result = neg ? -(int)acc : (int)acc;
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Parses a 64-bit integer directly from a UTF-8 ReadOnlySpan of bytes without string or char array allocations.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe bool TryParseInt64(ReadOnlySpan<byte> span, out long result)
+        {
+            result = 0;
+            if (span.IsEmpty) return false;
+
+            fixed (byte* p = span)
+            {
+                byte* ptr = p;
+                byte* end = p + span.Length;
+
+                while (ptr < end && (*ptr == (byte)' ' || *ptr == (byte)'\t')) ptr++;
+                while (end > ptr && (*(end - 1) == (byte)' ' || *(end - 1) == (byte)'\t')) end--;
+
+                if (ptr >= end) return false;
+
+                bool neg = false;
+                if (*ptr == (byte)'-') { neg = true; ptr++; }
+                else if (*ptr == (byte)'+') { ptr++; }
+
+                if (ptr >= end) return false;
+
+                ulong acc = 0;
+                while (ptr < end)
+                {
+                    byte b = *ptr++;
+                    if (b < (byte)'0' || b > (byte)'9') return false;
+                    acc = (acc * 10) + (ulong)(b - (byte)'0');
+                }
+
+                result = neg ? -(long)acc : (long)acc;
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Parses a decimal directly from a UTF-8 ReadOnlySpan of bytes using zero-allocation stack transformation.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryParseDecimal(ReadOnlySpan<byte> span, out decimal result)
+        {
+            result = 0m;
+            if (span.IsEmpty) return false;
+
+            if (span.Length <= 64)
+            {
+                Span<char> chars = stackalloc char[span.Length];
+                for (int i = 0; i < span.Length; i++) chars[i] = (char)span[i];
+                return TryParseDecimal(chars, out result);
+            }
+
+            char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(span.Length);
+            try
+            {
+                for (int i = 0; i < span.Length; i++) rented[i] = (char)span[i];
+                return TryParseDecimal(rented.AsSpan(0, span.Length), out result);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<char>.Shared.Return(rented);
+            }
+        }
+
+        /// <summary>
+        /// Parses a double directly from a UTF-8 ReadOnlySpan of bytes using zero-allocation stack transformation.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryParseDouble(ReadOnlySpan<byte> span, out double result)
+        {
+            result = 0.0;
+            if (span.IsEmpty) return false;
+
+            if (span.Length <= 64)
+            {
+                Span<char> chars = stackalloc char[span.Length];
+                for (int i = 0; i < span.Length; i++) chars[i] = (char)span[i];
+                return TryParseDouble(chars, out result);
+            }
+
+            char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(span.Length);
+            try
+            {
+                for (int i = 0; i < span.Length; i++) rented[i] = (char)span[i];
+                return TryParseDouble(rented.AsSpan(0, span.Length), out result);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<char>.Shared.Return(rented);
+            }
+        }
+
+        #endregion
     }
 }
