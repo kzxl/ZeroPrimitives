@@ -33,6 +33,7 @@ namespace ZeroPrimitives.Parsing
         private int _pos;
         private FastJsonTokenType _tokenType;
         private ReadOnlySpan<byte> _valueSpan;
+        private bool _hasError;
 
         public FastJsonReader(ReadOnlySpan<byte> utf8Json)
         {
@@ -40,6 +41,13 @@ namespace ZeroPrimitives.Parsing
             _pos = 0;
             _tokenType = FastJsonTokenType.None;
             _valueSpan = default;
+            _hasError = false;
+        }
+
+        public bool HasError
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _hasError;
         }
 
         public FastJsonTokenType TokenType
@@ -111,6 +119,8 @@ namespace ZeroPrimitives.Parsing
 
         public bool Read()
         {
+            if (_hasError) return false;
+
             SkipWhitespace();
 
             if (_pos >= _data.Length)
@@ -153,6 +163,11 @@ namespace ZeroPrimitives.Parsing
 
                 case (byte)'"':
                     ReadStringContent();
+                    if (_hasError)
+                    {
+                        _tokenType = FastJsonTokenType.None;
+                        return false;
+                    }
                     SkipWhitespace();
                     if (_pos < _data.Length && _data[_pos] == (byte)':')
                     {
@@ -238,6 +253,9 @@ namespace ZeroPrimitives.Parsing
                     return;
                 }
             }
+
+            // Unterminated string: EOF reached without closing quote
+            _hasError = true;
             _valueSpan = _data.Slice(start);
         }
 

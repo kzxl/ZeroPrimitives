@@ -248,6 +248,29 @@ namespace ZeroPrimitives.Cryptography
                 }
                 return (uint)crc ^ 0xFFFFFFFFu;
             }
+            else if (System.Runtime.Intrinsics.X86.Sse42.IsSupported)
+            {
+                uint crc = 0xFFFFFFFFu;
+                fixed (byte* p = data)
+                {
+                    byte* ptr = p;
+                    int length = data.Length;
+
+                    while (length >= 4)
+                    {
+                        crc = System.Runtime.Intrinsics.X86.Sse42.Crc32(crc, *(uint*)ptr);
+                        ptr += 4;
+                        length -= 4;
+                    }
+                    while (length > 0)
+                    {
+                        crc = System.Runtime.Intrinsics.X86.Sse42.Crc32(crc, *ptr);
+                        ptr++;
+                        length--;
+                    }
+                }
+                return crc ^ 0xFFFFFFFFu;
+            }
             else if (System.Runtime.Intrinsics.Arm.Crc32.Arm64.IsSupported)
             {
                 uint crc = 0xFFFFFFFFu;

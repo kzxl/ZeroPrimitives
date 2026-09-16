@@ -73,8 +73,29 @@ namespace ZeroPrimitives.Parsing
             {
                 if (_remaining.IsEmpty) return false;
 
-                bool inQuotes = false;
-                int idx = 0;
+                int firstSpecial = _remaining.IndexOfAny('\r', '\n', '"');
+                if (firstSpecial < 0)
+                {
+                    _current = _remaining;
+                    _remaining = ReadOnlySpan<char>.Empty;
+                    return true;
+                }
+
+                char hit = _remaining[firstSpecial];
+                if (hit == '\r' || hit == '\n')
+                {
+                    _current = _remaining.Slice(0, firstSpecial);
+                    if (hit == '\r' && firstSpecial + 1 < _remaining.Length && _remaining[firstSpecial + 1] == '\n')
+                    {
+                        firstSpecial++; // Skip \n in CRLF
+                    }
+                    _remaining = _remaining.Slice(firstSpecial + 1);
+                    return true;
+                }
+
+                // Quoted row path
+                bool inQuotes = true;
+                int idx = firstSpecial + 1;
 
                 while (idx < _remaining.Length)
                 {
@@ -144,8 +165,26 @@ namespace ZeroPrimitives.Parsing
                     return true;
                 }
 
-                bool inQuotes = false;
-                int idx = 0;
+                int firstSpecial = _remaining.IndexOfAny('"', _delimiter);
+                if (firstSpecial < 0)
+                {
+                    _current = _remaining;
+                    _remaining = ReadOnlySpan<char>.Empty;
+                    _isCompleted = true;
+                    return true;
+                }
+
+                if (_remaining[firstSpecial] == _delimiter)
+                {
+                    // Fast SIMD path: found delimiter without quotes before it
+                    _current = _remaining.Slice(0, firstSpecial);
+                    _remaining = _remaining.Slice(firstSpecial + 1);
+                    return true;
+                }
+
+                // Quoted cell path
+                bool inQuotes = true;
+                int idx = firstSpecial + 1;
 
                 while (idx < _remaining.Length)
                 {

@@ -52,25 +52,20 @@ namespace ZeroPrimitives.Parsing
 
                         if (pureDigits)
                         {
-                            long acc = 0;
+                            const uint MaxInt32Div10 = 214748364U;
+                            uint acc = 0;
                             while (ptr < end)
                             {
-                                acc = (acc * 10) + (*ptr++ - '0');
-                                if (acc > (long)int.MaxValue + 1)
+                                uint digit = (uint)(*ptr++ - '0');
+                                if (acc > MaxInt32Div10 || (acc == MaxInt32Div10 && digit > (uint)(neg ? 8 : 7)))
                                 {
-                                    result = neg ? int.MinValue : int.MaxValue;
+                                    result = defaultValue;
                                     return false;
                                 }
+                                acc = (acc * 10) + digit;
                             }
 
-                            long finalVal = neg ? -acc : acc;
-                            if (finalVal < int.MinValue || finalVal > int.MaxValue)
-                            {
-                                result = neg ? int.MinValue : int.MaxValue;
-                                return false;
-                            }
-
-                            result = (int)finalVal;
+                            result = neg ? unchecked((int)-acc) : (int)acc;
                             return true;
                         }
                     }
@@ -203,13 +198,20 @@ namespace ZeroPrimitives.Parsing
 
                         if (pureDigits)
                         {
+                            const ulong MaxInt64Div10 = 922337203685477580UL;
                             ulong acc = 0;
                             while (ptr < end)
                             {
-                                acc = (acc * 10) + (ulong)(*ptr++ - '0');
+                                ulong digit = (ulong)(*ptr++ - '0');
+                                if (acc > MaxInt64Div10 || (acc == MaxInt64Div10 && digit > (ulong)(neg ? 8 : 7)))
+                                {
+                                    result = defaultValue;
+                                    return false;
+                                }
+                                acc = (acc * 10) + digit;
                             }
 
-                            result = neg ? -(long)acc : (long)acc;
+                            result = neg ? unchecked((long)(0UL - acc)) : unchecked((long)acc);
                             return true;
                         }
                     }
@@ -556,16 +558,19 @@ namespace ZeroPrimitives.Parsing
 
                 if (ptr >= end) return false;
 
-                long acc = 0;
+                const uint MaxInt32Div10 = 214748364U;
+                uint acc = 0;
                 while (ptr < end)
                 {
                     byte b = *ptr++;
                     if (b < (byte)'0' || b > (byte)'9') return false;
-                    acc = (acc * 10) + (b - (byte)'0');
-                    if (acc > (long)int.MaxValue + (neg ? 1 : 0)) return false;
+                    uint digit = (uint)(b - (byte)'0');
+                    if (acc > MaxInt32Div10 || (acc == MaxInt32Div10 && digit > (uint)(neg ? 8 : 7)))
+                        return false;
+                    acc = (acc * 10) + digit;
                 }
 
-                result = neg ? -(int)acc : (int)acc;
+                result = neg ? unchecked((int)(0U - acc)) : unchecked((int)acc);
                 return true;
             }
         }
@@ -595,15 +600,19 @@ namespace ZeroPrimitives.Parsing
 
                 if (ptr >= end) return false;
 
+                const ulong MaxInt64Div10 = 922337203685477580UL;
                 ulong acc = 0;
                 while (ptr < end)
                 {
                     byte b = *ptr++;
                     if (b < (byte)'0' || b > (byte)'9') return false;
-                    acc = (acc * 10) + (ulong)(b - (byte)'0');
+                    ulong digit = (ulong)(b - (byte)'0');
+                    if (acc > MaxInt64Div10 || (acc == MaxInt64Div10 && digit > (ulong)(neg ? 8 : 7)))
+                        return false;
+                    acc = (acc * 10) + digit;
                 }
 
-                result = neg ? -(long)acc : (long)acc;
+                result = neg ? unchecked((long)(0UL - acc)) : unchecked((long)acc);
                 return true;
             }
         }

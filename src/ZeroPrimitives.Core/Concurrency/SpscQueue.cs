@@ -9,25 +9,25 @@ namespace ZeroPrimitives.Concurrency
     /// <summary>
     /// High-throughput, lock-free Single-Producer Single-Consumer (SPSC) bounded FIFO queue.
     /// Incorporates CPU cache-line padding to prevent False Sharing (L1/L2 cache-line thrashing) between producer and consumer threads.
-    /// Delivers tens of millions of operations per second with zero memory allocations during Enqueue/Dequeue.
+    /// Uses unsigned 32-bit (uint) modular sequence arithmetic to guarantee perpetual wrap-around safety (zero integer overflow bugs even after billions of operations).
     /// </summary>
     /// <typeparam name="T">Element type.</typeparam>
     public sealed class SpscQueue<T>
     {
         private readonly T[] _buffer;
-        private readonly int _mask;
+        private readonly uint _mask;
 
         // Cache line padding before head (prevent false sharing with object header and buffer ref)
         private long _pad0, _pad1, _pad2, _pad3, _pad4, _pad5, _pad6;
 
-        // Consumed position - primarily updated by Consumer thread
-        private int _head;
+        // Consumed sequence - primarily updated by Consumer thread
+        private uint _head;
 
         // Cache line padding between head and tail (guarantees head and tail reside on distinct 64-byte cache lines)
         private long _pad7, _pad8, _pad9, _pad10, _pad11, _pad12, _pad13;
 
-        // Produced position - primarily updated by Producer thread
-        private int _tail;
+        // Produced sequence - primarily updated by Producer thread
+        private uint _tail;
 
         // Cache line padding after tail
         private long _pad14, _pad15, _pad16, _pad17, _pad18, _pad19, _pad20;
@@ -49,7 +49,7 @@ namespace ZeroPrimitives.Concurrency
             }
 
             _buffer = new T[capacityPowerOfTwo];
-            _mask = capacityPowerOfTwo - 1;
+            _mask = (uint)(capacityPowerOfTwo - 1);
             _head = 0;
             _tail = 0;
         }
@@ -65,8 +65,8 @@ namespace ZeroPrimitives.Concurrency
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                int count = Volatile.Read(ref _tail) - Volatile.Read(ref _head);
-                return count > 0 ? count : 0;
+                uint count = Volatile.Read(ref _tail) - Volatile.Read(ref _head);
+                return (int)count;
             }
         }
 
@@ -83,10 +83,10 @@ namespace ZeroPrimitives.Concurrency
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryEnqueue(T item)
         {
-            int tail = _tail;
-            int head = Volatile.Read(ref _head);
+            uint tail = _tail;
+            uint head = Volatile.Read(ref _head);
 
-            if (tail - head < _buffer.Length)
+            if ((tail - head) < (uint)_buffer.Length)
             {
                 _buffer[tail & _mask] = item;
                 Volatile.Write(ref _tail, tail + 1);
@@ -103,12 +103,12 @@ namespace ZeroPrimitives.Concurrency
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryDequeue(out T item)
         {
-            int head = _head;
-            int tail = Volatile.Read(ref _tail);
+            uint head = _head;
+            uint tail = Volatile.Read(ref _tail);
 
             if (head != tail)
             {
-                int index = head & _mask;
+                uint index = head & _mask;
                 item = _buffer[index];
                 _buffer[index] = default!; // Allow GC collection of reference types
                 Volatile.Write(ref _head, head + 1);
@@ -125,8 +125,8 @@ namespace ZeroPrimitives.Concurrency
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryPeek(out T item)
         {
-            int head = _head;
-            int tail = Volatile.Read(ref _tail);
+            uint head = _head;
+            uint tail = Volatile.Read(ref _tail);
 
             if (head != tail)
             {
