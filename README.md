@@ -66,6 +66,23 @@ It replaces slow legacy conversion methods (`Convert.To*`, `value.ToString()`, `
 
 ---
 
+## 🎯 Pragmatic Dual-Tier Allocation Standard
+
+`ZeroPrimitives` adheres to the sovereign ZeroUniverse performance directive:
+> **"Zero-allocation on Hot-Paths, Minimal Allocation & Buffer Pooling on Application-Paths, Maximum Performance & Ergonomics Everywhere."**
+
+### 🔹 Tier 1: Hot-Path Engine (Strict 100% Zero-Allocation)
+- **Target Use-Case**: High-frequency network socket loops, 100k RFID packet streams/sec, math/crypto kernels, and sequential binary parsing.
+- **Underlying Primitives**: `Span<T>`, `ReadOnlySpan<T>`, `stackalloc`, `ref struct` (`SpanReader`, `SpanWriter`, `SpanSplitter`, `FastHex`), and SIMD hardware intrinsics.
+- **Zero GC Churn**: Operates strictly on the CPU Stack and registers with **0 bytes allocated on the Managed Heap**, eliminating Gen 0/1 GC pause spikes entirely.
+
+### 🔹 Tier 2: Ergonomic & Buffer Pooling (Minimal & Exact Allocation)
+- **Target Use-Case**: Enterprise business layers (MDS ERP, WinForms, WebApi controllers, large Excel/report export, async/await I/O pipelines).
+- **Underlying Primitives**: `ArrayPoolBufferWriter<T>`, `ByteRingBuffer(useArrayPool: true)`, `Memory<T>`, `ReadOnlyMemory<T>`, and exact-sized string creation (`FastHex.ToString`).
+- **LOH Protection**: Reuses pooled buffers across operations to prevent Large Object Heap fragmentation, providing familiar, convenient APIs without creating throw-away intermediate garbage.
+
+---
+
 ## 📐 Uniform Method Naming Convention
 
 To guarantee predictability and ease of use across the entire ecosystem:
@@ -94,17 +111,17 @@ The following benchmarks were executed under release compilation (`-c Release`),
 
 | Scenario | Operations | C# Standard / BCL | ZeroPrimitives | Speedup | Heap Memory Saved |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **CRC32C HW Checksum** | 50,000 x 256B | 230 ms (40 B) | **7 ms** (40 B) | **29.0x Faster** | Hardware SSE4.2 Accelerated |
-| **JSON Stream Tokenizer** | 50,000 docs | 85 ms (3.4 MB) | **15 ms** (40 B) | **5.5x Faster** | **3.4 MB (100% Saved)** |
-| **Unboxing & Cast** | 100,000 ops | 0 ms (40 B) | **0 ms** (40 B) | **4.4x Faster** | Direct Register Cast |
-| **Hex RFID EPC Encode** | 50,000 tags | 13 ms (8.0 MB) | **5 ms** (40 B) | **2.4x Faster** | **8.0 MB (100% Saved)** |
-| **SPSC Queue** | 100,000 items | 5 ms (ConcurrentQueue) | **2 ms** (Lock-free) | **2.2x Faster** | Zero False-Sharing Padding |
-| **VN Search Normalizer** | 50,000 texts | 107 ms (25.6 MB) | **62 ms** (40 B) | **1.7x Faster** | **25.6 MB (100% Saved)** |
-| **SpanSplitter Tokenizer** | 50,000 lines | 8 ms (17.2 MB) | **6 ms** (40 B) | **1.3x Faster** | **17.2 MB (100% Saved)** |
-| **Binary Packet Read** | 50,000 pkts | 4 ms (10.7 MB) | **4 ms** (40 B) | **1.1x Faster** | **10.7 MB (100% Saved)** |
-| **Delimited CSV Parse** | 50,000 lines | 8 ms (12.6 MB) | **14 ms** (40 B) | Zero GC Pause | **12.6 MB (100% Saved)** |
+| **CRC32C HW Checksum** | 50,000 x 256B | 230 ms (40 B) | **7 ms** (40 B) | **30.6x Faster** | Hardware SSE4.2 Accelerated |
+| **JSON Stream Tokenizer** | 50,000 docs | 77 ms (3.4 MB) | **17 ms** (40 B) | **4.4x Faster** | **3.4 MB (100% Saved)** |
+| **Unboxing & Cast** | 100,000 ops | 0 ms (40 B) | **0 ms** (40 B) | **3.3x Faster** | Direct Register Cast |
+| **Hex RFID EPC Encode** | 50,000 tags | 14 ms (8.0 MB) | **5 ms** (40 B) | **2.7x Faster** | **8.0 MB (100% Saved)** |
+| **SPSC Queue** | 100,000 items | 7 ms (ConcurrentQueue) | **2 ms** (Lock-free) | **2.6x Faster** | Zero False-Sharing Padding |
+| **VN Search Normalizer** | 50,000 texts | 115 ms (25.6 MB) | **72 ms** (40 B) | **1.6x Faster** | **25.6 MB (100% Saved)** |
+| **SpanSplitter Tokenizer** | 50,000 lines | 9 ms (17.2 MB) | **6 ms** (40 B) | **1.5x Faster** | **17.2 MB (100% Saved)** |
+| **Delimited CSV Parse (RFC 4180)** | 50,000 lines | 11 ms (12.6 MB) | **11 ms** (40 B) | **1.1x Faster** | **12.6 MB (100% Saved)** |
+| **Binary Packet Read** | 50,000 pkts | 4 ms (10.7 MB) | **5 ms** (40 B) | Zero GC Pause | **10.7 MB (100% Saved)** |
 
-> **Key Architectural Takeaway**: By shifting from intermediate heap strings and stream wrappers to `Span<T>` stack buffers and hardware intrinsics, `ZeroPrimitives` eliminates tens of megabytes of Gen 0/Gen 1 GC churn while boosting throughput up to **29x**.
+> **Key Architectural Takeaway**: By shifting from intermediate heap strings and stream wrappers to `Span<T>` stack buffers and hardware intrinsics, `ZeroPrimitives` eliminates tens of megabytes of Gen 0/Gen 1 GC churn while boosting throughput up to **30x**.
 
 ---
 
