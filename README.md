@@ -47,9 +47,36 @@ It replaces slow legacy conversion methods (`Convert.To*`, `value.ToString()`, `
 - **Master Data Validators**: Tax Code (MST Modulo 11 check digit, 10/13 digits), Citizen ID (CCCD 12-digit), Phone numbers.
 - **Financial Rounding**: VAS/Circular 200 compliant commercial rounding (`AwayFromZero`) and VAT line-item discrepancy reconciliation.
 
-### 8. Compiled Expression Object Mapper (`FastMapper`, `FastTableMapper`)
-- **Dynamic Object Copy**: Compiles Expression Trees into cached native IL delegates for near-instant object-to-object shallow mapping.
-- **ADO.NET Micro-Mapper**: High-throughput projection from `IDataReader`, `IDataRecord`, `DataTable`, and `DataRow` to POCOs with zero reflection at runtime.
+### 9. Hexadecimal & Low-Level Codecs (`FastHex`)
+- **Zero-Allocation Hex Encoder/Decoder**: `FastHex.Encode`, `FastHex.Decode`, `FastHex.TryDecode`, `FastHex.ToString`, and `FastHex.IsValid`.
+- **RFID & IoT Native**: Converts 12-byte/24-character EPC/TID strings without intermediate heap allocations across `.NET Standard 2.0`, `.NET 4.6.2`, and `.NET 8.0`.
+
+### 10. Zero-Allocation Tokenizer (`SpanSplitter`)
+- **Allocation-Free String Splitting**: `span.SplitFast(';')`, `str.SplitFast(';')`, and string delimiter `span.SplitFast("::")` using ref struct enumerators.
+- **Binary Frame Splitting**: `span.SplitFast((byte)0x00)` for network byte streams without allocating arrays.
+
+### 11. Cross-Platform Bit Manipulation (`BitOps`)
+- **Hardware-Accelerated Bit Operations**: Parity with `System.Numerics.BitOperations` on `.NET Standard 2.0` and `.NET 4.6.2`.
+- **Operations**: `PopCount`, `LeadingZeroCount` (LZCNT), `TrailingZeroCount` (TZCNT), `RotateLeft`, `RotateRight`, `IsPowerOfTwo`, `RoundUpToPowerOfTwo`.
+
+### 12. Streaming Buffers & Diagnostics (`ArrayPoolBufferWriter`, `ByteRingBuffer`, `ValueStopwatch`)
+- **ArrayPoolBufferWriter<T>**: `IBufferWriter<T>` renting from `ArrayPool<T>.Shared` to prevent Large Object Heap (LOH) fragmentation during report export.
+- **ByteRingBuffer**: Circular byte buffer for TCP sockets and Serial COM ports without memory shifting (`Array.Copy`).
+- **ValueStopwatch**: Zero-allocation `readonly struct` for microsecond latency profiling.
+
+---
+
+## 📐 Uniform Method Naming Convention
+
+To guarantee predictability and ease of use across the entire ecosystem:
+
+| Convention | Description | Standard Example |
+| :--- | :--- | :--- |
+| **`Try[Action]`** | Never throws, returns `bool`, final argument is `out T result`. | `TryReadInt32LittleEndian`, `TryDecode`, `TryParseInt64` |
+| **`[Action]` (Direct)** | Returns value directly, throws via non-inlined `ThrowHelper` on failure. | `ReadInt32LittleEndian`, `Decode`, `ParseInt64` |
+| **`Encode` / `Decode`** | Two-way transformation between binary spans and character/text spans. | `FastHex.Encode(...)`, `FastHex.Decode(...)` |
+| **`SplitFast` / `Enumerate*`** | Zero-allocation `ref struct` iteration over tokens or rows. | `text.SplitFast(';')`, `FastCsvParser.EnumerateRows(...)` |
+| **`[Type]LittleEndian` / `BigEndian`** | Explicit endianness specifier for binary network and hardware I/O. | `ReadUInt16BigEndian`, `WriteInt32LittleEndian` |
 
 ---
 
@@ -61,60 +88,76 @@ The following benchmarks were executed under release compilation (`-c Release`),
 - **CPU**: Intel(R) Core(TM) i5-10400 CPU @ 2.90GHz (6 Cores, 12 Logical Processors)
 - **RAM**: 32.0 GB DDR4
 - **Operating System**: Microsoft Windows 10 Pro (x64)
-- **Runtime Environment**: .NET 8.0 / .NET 10 Preview (x64, Server GC default)
+- **Runtime Environment**: .NET 8.0 (x64, Server GC default)
 
 ### Benchmark Results
 
 | Scenario | Operations | C# Standard / BCL | ZeroPrimitives | Speedup | Heap Memory Saved |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **CRC32C Checksum** | 50,000 x 256B | 217 ms (40 B) | **7 ms** (40 B) | **30.0x Faster** | Hardware SSE4.2 Accelerated |
-| **Unboxing & Cast** | 100,000 ops | 0 ms (40 B) | **0 ms** (40 B) | **6.1x Faster** | Direct Register Cast |
-| **JSON Stream Tokenizer** | 50,000 docs | 78 ms (3.4 MB) | **16 ms** (40 B) | **4.9x Faster** | **3.4 MB (100% Saved)** |
-| **SPSC Queue** | 100,000 items | 5 ms (ConcurrentQueue) | **2 ms** (Lock-free) | **2.1x Faster** | Zero False-Sharing Padding |
-| **VN Search Normalizer** | 50,000 texts | 108 ms (25.6 MB) | **53 ms** (40 B) | **2.0x Faster** | **25.6 MB (100% Saved)** |
-| **Binary Packet Read** | 50,000 pkts | 5 ms (10.7 MB) | **4 ms** (40 B) | **1.3x Faster** | **10.7 MB (100% Saved)** |
-| **Delimited CSV Parse** | 50,000 lines | 11 ms (12.6 MB) | **30 ms** (40 B) | Zero GC Pause | **12.6 MB (100% Saved)** |
+| **CRC32C HW Checksum** | 50,000 x 256B | 230 ms (40 B) | **7 ms** (40 B) | **29.0x Faster** | Hardware SSE4.2 Accelerated |
+| **JSON Stream Tokenizer** | 50,000 docs | 85 ms (3.4 MB) | **15 ms** (40 B) | **5.5x Faster** | **3.4 MB (100% Saved)** |
+| **Unboxing & Cast** | 100,000 ops | 0 ms (40 B) | **0 ms** (40 B) | **4.4x Faster** | Direct Register Cast |
+| **Hex RFID EPC Encode** | 50,000 tags | 13 ms (8.0 MB) | **5 ms** (40 B) | **2.4x Faster** | **8.0 MB (100% Saved)** |
+| **SPSC Queue** | 100,000 items | 5 ms (ConcurrentQueue) | **2 ms** (Lock-free) | **2.2x Faster** | Zero False-Sharing Padding |
+| **VN Search Normalizer** | 50,000 texts | 107 ms (25.6 MB) | **62 ms** (40 B) | **1.7x Faster** | **25.6 MB (100% Saved)** |
+| **SpanSplitter Tokenizer** | 50,000 lines | 8 ms (17.2 MB) | **6 ms** (40 B) | **1.3x Faster** | **17.2 MB (100% Saved)** |
+| **Binary Packet Read** | 50,000 pkts | 4 ms (10.7 MB) | **4 ms** (40 B) | **1.1x Faster** | **10.7 MB (100% Saved)** |
+| **Delimited CSV Parse** | 50,000 lines | 8 ms (12.6 MB) | **14 ms** (40 B) | Zero GC Pause | **12.6 MB (100% Saved)** |
 
-> **Key Architectural Takeaway**: By shifting from intermediate heap strings and stream wrappers to `Span<T>` stack buffers and hardware intrinsics, `ZeroPrimitives` eliminates tens of megabytes of Gen 0/Gen 1 GC churn while boosting throughput up to **30x**.
+> **Key Architectural Takeaway**: By shifting from intermediate heap strings and stream wrappers to `Span<T>` stack buffers and hardware intrinsics, `ZeroPrimitives` eliminates tens of megabytes of Gen 0/Gen 1 GC churn while boosting throughput up to **29x**.
 
 ---
 
 ## ⚡ Quick Examples
 
-### 1. Zero-Allocation Sequential Binary I/O
+### 1. RFID EPC Hex Encoding & Parsing
 ```csharp
 using ZeroPrimitives.Buffers;
 
-// Write binary packet on stack
-Span<byte> buffer = stackalloc byte[64];
-var writer = new SpanWriter(buffer);
-writer.WriteByte(0xAA);
-writer.WriteInt32LittleEndian(1001);
-writer.WriteStringUtf8("MDS-RFID".AsSpan());
+// Encode raw 12-byte EPC to hex on stack
+Span<char> hexBuffer = stackalloc char[24];
+byte[] epcBytes = new byte[] { 0xE2, 0x80, 0x11, 0x70, 0x00, 0x00, 0x02, 0x0B, 0x12, 0x34, 0x56, 0x78 };
+FastHex.Encode(epcBytes, hexBuffer);
 
-// Read back without allocating MemoryStream or BinaryReader
-var reader = new SpanReader(writer.WrittenSpan);
-byte header = reader.ReadByte();
-int id = reader.ReadInt32LittleEndian();
-string code = reader.ReadStringUtf8("MDS-RFID".Length);
-```
-
-### 2. GS1 Barcode Scanning (Warehouse & Logistics)
-```csharp
-using ZeroPrimitives.Parsing;
-
-// Parse raw handheld scanner output
-var parser = new FastGs1Parser("(01)08881234567890(17)261231(10)LOT2026A(21)SN9988".AsSpan());
-
-while (parser.MoveNext(out var element))
+// Decode hex back to binary without allocations
+Span<byte> decodedBytes = stackalloc byte[12];
+if (FastHex.TryDecode(hexBuffer, decodedBytes, out int written))
 {
-    if (element.IsGtin) Console.WriteLine($"GTIN: {element.Value}");
-    if (element.IsExpirationDate && element.TryGetDate(out var exp)) Console.WriteLine($"Exp: {exp:yyyy-MM-dd}");
-    if (element.IsLot) Console.WriteLine($"Lot: {element.Value}");
+    // Process decoded binary EPC
 }
 ```
 
-### 3. Hardware-Accelerated CRC32C & Lock-Free Queue
+### 2. Zero-Allocation Tokenization (`SpanSplitter`)
+```csharp
+using ZeroPrimitives.Text;
+
+string config = "ORDER_2026_001;CUSTOMER_ABC;WAREHOUSE_NORTH;SKU_999;QTY_100";
+
+// Zero heap allocations: replaces string.Split(';')
+foreach (ReadOnlySpan<char> token in config.AsSpan().SplitFast(';'))
+{
+    // Process token
+}
+```
+
+### 3. Circular Streaming Buffer for TCP / Serial COM Port
+```csharp
+using ZeroPrimitives.Buffers;
+
+var ring = new ByteRingBuffer(capacity: 4096, useArrayPool: true);
+
+// Incoming socket chunk
+ring.Write(receivedSocketBytes);
+
+// Peek header frame without shifting memory
+Span<byte> header = stackalloc byte[4];
+if (ring.Peek(header) == 4 && header[0] == 0xAA)
+{
+    ring.Advance(4); // Consume header
+}
+```
+
+### 4. Hardware-Accelerated CRC32C & Lock-Free SPSC Queue
 ```csharp
 using ZeroPrimitives.Cryptography;
 using ZeroPrimitives.Concurrency;
@@ -123,7 +166,7 @@ using ZeroPrimitives.Concurrency;
 uint checksum = FastCrc.Crc32C(packetSpan);
 
 // High-speed Single-Producer Single-Consumer queue between I/O and processing threads
-var queue = new SpscQueue<int>(1024);
+var queue = new SpscQueue<int>(capacityPowerOfTwo: 1024);
 queue.TryEnqueue(42);
 if (queue.TryDequeue(out int val))
 {

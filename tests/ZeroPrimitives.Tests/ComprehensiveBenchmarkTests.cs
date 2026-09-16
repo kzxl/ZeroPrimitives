@@ -14,6 +14,7 @@ using ZeroPrimitives.Concurrency;
 using ZeroPrimitives.Cryptography;
 using ZeroPrimitives.Extensions;
 using ZeroPrimitives.Parsing;
+using ZeroPrimitives.Text;
 using ZeroPrimitives.Validation;
 
 namespace ZeroPrimitives.Tests
@@ -387,6 +388,95 @@ namespace ZeroPrimitives.Tests
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
                 sb.AppendLine(string.Format("{0,-32} | {1,-22} | {2,-22} | {3,-12} | {4,-10}",
                     "8. JSON Stream Parse (50k)",
+                    $"{swBcl.ElapsedMilliseconds} ms ({FormatBytes(memBcl)})",
+                    $"{swZp.ElapsedMilliseconds} ms ({FormatBytes(memZp)})",
+                    $"{speedup:F1}x Faster",
+                    $"{FormatBytes(Math.Max(0, memBcl - memZp))}"));
+            }
+
+            // 9. FastHex vs BitConverter (50,000 RFID 12-byte EPC encodings)
+            {
+                const int iterations = 50_000;
+                byte[] epcBytes = new byte[] { 0xE2, 0x80, 0x11, 0x70, 0x00, 0x00, 0x02, 0x0B, 0x12, 0x34, 0x56, 0x78 };
+
+                // Warm up
+                _ = BitConverter.ToString(epcBytes).Replace("-", "");
+                Span<char> warmBuf = stackalloc char[24];
+                FastHex.Encode(epcBytes, warmBuf);
+
+                // BitConverter + Replace
+                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                var swBcl = Stopwatch.StartNew();
+                int hashBcl = 0;
+                for (int i = 0; i < iterations; i++)
+                {
+                    string s = BitConverter.ToString(epcBytes).Replace("-", "");
+                    hashBcl += s.Length;
+                }
+                swBcl.Stop();
+                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+
+                // ZeroPrimitives FastHex
+                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                var swZp = Stopwatch.StartNew();
+                int hashZp = 0;
+                Span<char> hexChars = stackalloc char[24];
+                for (int i = 0; i < iterations; i++)
+                {
+                    hashZp += FastHex.Encode(epcBytes, hexChars);
+                }
+                swZp.Stop();
+                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+
+                Assert.Equal(hashBcl, hashZp);
+                double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
+                sb.AppendLine(string.Format("{0,-32} | {1,-22} | {2,-22} | {3,-12} | {4,-10}",
+                    "9. Hex Encode RFID EPC (50k)",
+                    $"{swBcl.ElapsedMilliseconds} ms ({FormatBytes(memBcl)})",
+                    $"{swZp.ElapsedMilliseconds} ms ({FormatBytes(memZp)})",
+                    $"{speedup:F1}x Faster",
+                    $"{FormatBytes(Math.Max(0, memBcl - memZp))}"));
+            }
+
+            // 10. SpanSplitter vs string.Split (50,000 multi-token ERP strings)
+            {
+                const int iterations = 50_000;
+                string config = "ORDER_2026_001;CUSTOMER_ABC;WAREHOUSE_NORTH;SKU_ITEM_999;QTY_100;APPROVED";
+
+                // Warm up
+                _ = config.Split(';');
+                foreach (var _ in config.AsSpan().SplitFast(';')) { }
+
+                // string.Split
+                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                var swBcl = Stopwatch.StartNew();
+                int totalTokensBcl = 0;
+                for (int i = 0; i < iterations; i++)
+                {
+                    string[] parts = config.Split(';');
+                    totalTokensBcl += parts.Length;
+                }
+                swBcl.Stop();
+                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+
+                // ZeroPrimitives SpanSplitter
+                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                var swZp = Stopwatch.StartNew();
+                int totalTokensZp = 0;
+                for (int i = 0; i < iterations; i++)
+                {
+                    foreach (var _ in config.AsSpan().SplitFast(';'))
+                    {
+                        totalTokensZp++;
+                    }
+                }
+                swZp.Stop();
+                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+
+                Assert.Equal(totalTokensBcl, totalTokensZp);
+                double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
+                sb.AppendLine(string.Format("{0,-32} | {1,-22} | {2,-22} | {3,-12} | {4,-10}",
+                    "10. SpanSplitter Tokenize (50k)",
                     $"{swBcl.ElapsedMilliseconds} ms ({FormatBytes(memBcl)})",
                     $"{swZp.ElapsedMilliseconds} ms ({FormatBytes(memZp)})",
                     $"{speedup:F1}x Faster",

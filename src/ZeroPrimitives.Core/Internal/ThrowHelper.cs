@@ -45,5 +45,43 @@ namespace ZeroPrimitives.Internal
         {
             throw new InvalidOperationException($"Invalid {typeName} encoding in binary stream.");
         }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowArgumentException(string message, string? paramName = null)
+        {
+            if (paramName != null)
+                throw new ArgumentException(message, paramName);
+            throw new ArgumentException(message);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowArgumentNullException(string paramName)
+        {
+            throw new ArgumentNullException(paramName);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowArgumentOutOfRangeException(string paramName, string message)
+        {
+            throw new ArgumentOutOfRangeException(paramName, message);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowFormatException(string message)
+        {
+            throw new FormatException(message);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowInvalidOperationException(string message)
+        {
+            throw new InvalidOperationException(message);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void ThrowObjectDisposedException(string objectName)
+        {
+            throw new ObjectDisposedException(objectName);
+        }
     }
 }
