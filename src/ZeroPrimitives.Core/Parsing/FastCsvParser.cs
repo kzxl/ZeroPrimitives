@@ -182,24 +182,41 @@ namespace ZeroPrimitives.Parsing
                     return true;
                 }
 
-                // Quoted cell path
-                bool inQuotes = true;
-                int idx = firstSpecial + 1;
-
-                while (idx < _remaining.Length)
+                // Quoted cell path: vectorize finding the matching closing quote
+                int searchStart = firstSpecial + 1;
+                while (searchStart < _remaining.Length)
                 {
-                    char c = _remaining[idx];
-                    if (c == '"')
+                    int quoteRelative = _remaining.Slice(searchStart).IndexOf('"');
+                    if (quoteRelative < 0)
                     {
-                        inQuotes = !inQuotes;
-                    }
-                    else if (!inQuotes && c == _delimiter)
-                    {
-                        _current = _remaining.Slice(0, idx);
-                        _remaining = _remaining.Slice(idx + 1);
+                        _current = _remaining;
+                        _remaining = ReadOnlySpan<char>.Empty;
+                        _isCompleted = true;
                         return true;
                     }
-                    idx++;
+
+                    int quoteIdx = searchStart + quoteRelative;
+                    // Check if it's an escaped double quote ("")
+                    if (quoteIdx + 1 < _remaining.Length && _remaining[quoteIdx + 1] == '"')
+                    {
+                        searchStart = quoteIdx + 2;
+                        continue;
+                    }
+
+                    // Found closing quote! Look for the delimiter after the closing quote
+                    int delimRelative = _remaining.Slice(quoteIdx + 1).IndexOf(_delimiter);
+                    if (delimRelative < 0)
+                    {
+                        _current = _remaining;
+                        _remaining = ReadOnlySpan<char>.Empty;
+                        _isCompleted = true;
+                        return true;
+                    }
+
+                    int delimIdx = quoteIdx + 1 + delimRelative;
+                    _current = _remaining.Slice(0, delimIdx);
+                    _remaining = _remaining.Slice(delimIdx + 1);
+                    return true;
                 }
 
                 _current = _remaining;
