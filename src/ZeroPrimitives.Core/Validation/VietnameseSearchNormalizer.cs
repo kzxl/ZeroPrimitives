@@ -169,6 +169,146 @@ namespace ZeroPrimitives.Validation
             }
         }
 
+        /// <summary>
+        /// Removes diacritics from Vietnamese string while preserving letter casing and special symbols.
+        /// Zero-allocation on small strings (<= 256 chars via stackalloc).
+        /// </summary>
+        public static string RemoveDiacritics(string? source)
+        {
+            if (string.IsNullOrEmpty(source)) return string.Empty;
+
+            var span = source.AsSpan();
+            if (span.Length <= 256)
+            {
+                Span<char> buffer = stackalloc char[span.Length];
+                for (int i = 0; i < span.Length; i++)
+                {
+                    buffer[i] = StripDiacriticPreserveCase(span[i]);
+                }
+                return buffer.ToString();
+            }
+
+            char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(span.Length);
+            try
+            {
+                for (int i = 0; i < span.Length; i++)
+                {
+                    rented[i] = StripDiacriticPreserveCase(span[i]);
+                }
+                return new string(rented, 0, span.Length);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<char>.Shared.Return(rented);
+            }
+        }
+
+        /// <summary>
+        /// Converts Vietnamese string into unaccented, URL-safe transfer string:
+        /// Replaces special characters [~`!@#$%^&amp;*()+=''] with '-', spaces with '_', and strips diacritics.
+        /// Zero-allocation on small strings (<= 256 chars via stackalloc).
+        /// </summary>
+        public static string UnSignedTransfer(string? source)
+        {
+            if (string.IsNullOrWhiteSpace(source)) return string.Empty;
+
+            var span = source.AsSpan();
+            if (span.Length <= 256)
+            {
+                Span<char> buffer = stackalloc char[span.Length];
+                for (int i = 0; i < span.Length; i++)
+                {
+                    char c = span[i];
+                    if (c == ' ') c = '_';
+                    else if (IsSpecialTransferChar(c)) c = '-';
+                    else c = StripDiacriticPreserveCase(c);
+                    buffer[i] = c;
+                }
+                return buffer.ToString();
+            }
+
+            char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(span.Length);
+            try
+            {
+                for (int i = 0; i < span.Length; i++)
+                {
+                    char c = span[i];
+                    if (c == ' ') c = '_';
+                    else if (IsSpecialTransferChar(c)) c = '-';
+                    else c = StripDiacriticPreserveCase(c);
+                    rented[i] = c;
+                }
+                return new string(rented, 0, span.Length);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<char>.Shared.Return(rented);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsSpecialTransferChar(char c)
+        {
+            return c == '~' || c == '`' || c == '!' || c == '@' || c == '#' ||
+                   c == '$' || c == '%' || c == '^' || c == '&' || c == '*' ||
+                   c == '(' || c == ')' || c == '+' || c == '=' || c == '\'';
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static char StripDiacriticPreserveCase(char c)
+        {
+            switch (c)
+            {
+                case 'á': case 'à': case 'ả': case 'ã': case 'ạ':
+                case 'ă': case 'ắ': case 'ằ': case 'ẳ': case 'ẵ': case 'ặ':
+                case 'â': case 'ấ': case 'ầ': case 'ẩ': case 'ẫ': case 'ậ':
+                    return 'a';
+                case 'Á': case 'À': case 'Ả': case 'Ã': case 'Ạ':
+                case 'Ă': case 'Ắ': case 'Ằ': case 'Ẳ': case 'Ẵ': case 'Ặ':
+                case 'Â': case 'Ấ': case 'Ầ': case 'Ẩ': case 'Ẫ': case 'Ậ':
+                    return 'A';
+
+                case 'é': case 'è': case 'ẻ': case 'ẽ': case 'ẹ':
+                case 'ê': case 'ế': case 'ề': case 'ể': case 'ễ': case 'ệ':
+                    return 'e';
+                case 'É': case 'È': case 'Ẻ': case 'Ẽ': case 'Ẹ':
+                case 'Ê': case 'Ế': case 'Ề': case 'Ể': case 'Ễ': case 'Ệ':
+                    return 'E';
+
+                case 'í': case 'ì': case 'ỉ': case 'ĩ': case 'ị':
+                    return 'i';
+                case 'Í': case 'Ì': case 'Ỉ': case 'Ĩ': case 'Ị':
+                    return 'I';
+
+                case 'ó': case 'ò': case 'ỏ': case 'õ': case 'ọ':
+                case 'ô': case 'ố': case 'ồ': case 'ổ': case 'ỗ': case 'ộ':
+                case 'ơ': case 'ớ': case 'ờ': case 'ở': case 'ỡ': case 'ợ':
+                    return 'o';
+                case 'Ó': case 'Ò': case 'Ỏ': case 'Õ': case 'Ọ':
+                case 'Ô': case 'Ố': case 'Ồ': case 'Ổ': case 'Ỗ': case 'Ộ':
+                case 'Ơ': case 'Ớ': case 'Ờ': case 'Ở': case 'Ỡ': case 'Ợ':
+                    return 'O';
+
+                case 'ú': case 'ù': case 'ủ': case 'ũ': case 'ụ':
+                case 'ư': case 'ứ': case 'ừ': case 'ử': case 'ữ': case 'ự':
+                    return 'u';
+                case 'Ú': case 'Ù': case 'Ủ': case 'Ũ': case 'Ụ':
+                case 'Ư': case 'Ứ': case 'Ừ': case 'Ử': case 'Ữ': case 'Ự':
+                    return 'U';
+
+                case 'ý': case 'ỳ': case 'ỷ': case 'ỹ': case 'ỵ':
+                    return 'y';
+                case 'Ý': case 'Ỳ': case 'Ỷ': case 'Ỹ': case 'Ỵ':
+                    return 'Y';
+
+                case 'đ': return 'd';
+                case 'Đ': return 'D';
+
+                default:
+                    return c;
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static char StripDiacritic(char c)
         {
