@@ -20,6 +20,41 @@ namespace ZeroPrimitives.Tests
         }
 
         [Fact]
+        public void VietnameseSearchNormalizer_RemoveDiacritics_PreservesCasingAndPunctuation()
+        {
+            string input = "Công Ty Cổ Phần Sài Gòn & Đắk Lắk (TP.HCM)!";
+            string expected = "Cong Ty Co Phan Sai Gon & Dak Lak (TP.HCM)!";
+
+            string result = VietnameseSearchNormalizer.RemoveDiacritics(input);
+            Assert.Equal(expected, result);
+        }
+
+        [Fact]
+        public void VietnameseSearchNormalizer_UnSignedTransfer_ReplacesSpecialsAndSpaces()
+        {
+            string input = "Phiếu Nhập Kho #123 (Vật Tư)!";
+            // ' ' -> '_', '#' -> '-', '(' -> '-', ')' -> '-', '!' -> '-'
+            string result = VietnameseSearchNormalizer.UnSignedTransfer(input);
+            Assert.Equal("Phieu_Nhap_Kho_-123_-Vat_Tu--", result);
+        }
+
+        [Fact]
+        public void VietnameseSearchNormalizer_LongString_UsesArrayPoolCorrectly()
+        {
+            // String longer than 256 chars to test the ArrayPool fallback branch
+            string longPart = "Đơn hàng sản xuất kiểm định chất lượng cao cho nhà máy số 1 ";
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < 10; i++) sb.Append(longPart);
+            string longInput = sb.ToString();
+
+            string result = VietnameseSearchNormalizer.RemoveDiacritics(longInput);
+            Assert.DoesNotContain("Đ", result);
+            Assert.DoesNotContain("ả", result);
+            Assert.DoesNotContain("ế", result);
+            Assert.StartsWith("Don hang san xuat", result);
+        }
+
+        [Fact]
         public void VietnameseSearchNormalizer_SpanOverload_ZeroAllocates()
         {
             ReadOnlySpan<char> input = "Phiếu Nhập Kho Thành Phẩm".AsSpan();
