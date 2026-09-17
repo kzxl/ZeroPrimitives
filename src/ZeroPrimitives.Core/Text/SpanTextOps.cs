@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace ZeroPrimitives.Text
 {
@@ -170,6 +171,77 @@ namespace ZeroPrimitives.Text
             if (c >= 'a' && c <= 'f') return c - 'a' + 10;
             if (c >= 'A' && c <= 'F') return c - 'A' + 10;
             return -1;
+        }
+
+        /// <summary>
+        /// Returns true if the span contains only ASCII digit characters ('0'-'9').
+        /// Returns false if empty or contains non-digit characters.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsDigitsOnly(ReadOnlySpan<char> span)
+        {
+            if (span.IsEmpty) return false;
+            for (int i = 0; i < span.Length; i++)
+            {
+                char c = span[i];
+                if (c < '0' || c > '9') return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Returns true if the string contains only ASCII digit characters ('0'-'9').
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsDigitsOnly(string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return false;
+            return IsDigitsOnly(value.AsSpan());
+        }
+
+        /// <summary>
+        /// Returns true if the span represents a valid 32-bit integer (optionally allowing negative sign).
+        /// Rejects decimal numbers, exponents, and non-digit characters.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsInteger(ReadOnlySpan<char> span, bool allowNegative = true)
+        {
+            span = TrimAsciiWhitespace(span);
+            if (span.IsEmpty) return false;
+
+            int start = 0;
+            if (span[0] == '-')
+            {
+                if (!allowNegative || span.Length == 1) return false;
+                start = 1;
+            }
+            else if (span[0] == '+')
+            {
+                if (span.Length == 1) return false;
+                start = 1;
+            }
+
+            for (int i = start; i < span.Length; i++)
+            {
+                char c = span[i];
+                if (c < '0' || c > '9') return false;
+            }
+
+#if NET8_0_OR_GREATER
+            return int.TryParse(span, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _);
+#else
+            return int.TryParse(span.ToString(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _);
+#endif
+        }
+
+        /// <summary>
+        /// Returns true if the string represents a valid 32-bit integer (optionally allowing negative sign).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsInteger(string? value, bool allowNegative = true)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            return IsInteger(value.AsSpan(), allowNegative);
         }
     }
 }

@@ -43,5 +43,38 @@ namespace ZeroPrimitives.Tests
             Assert.False(SpanTextOps.TryHexToBytes("123".AsSpan(), buf, out _)); // Odd length
             Assert.False(SpanTextOps.TryHexToBytes("12ZZ".AsSpan(), buf, out _)); // Non-hex chars
         }
+
+        [Fact]
+        public void IsDigitsOnly_ValidatesCorrectly()
+        {
+            Assert.True(SpanTextOps.IsDigitsOnly("123456"));
+            Assert.True(SpanTextOps.IsDigitsOnly("0"));
+            Assert.False(SpanTextOps.IsDigitsOnly("123a"));
+            Assert.False(SpanTextOps.IsDigitsOnly(""));
+            Assert.False(SpanTextOps.IsDigitsOnly((string?)null));
+            Assert.False(SpanTextOps.IsDigitsOnly("-123"));
+            Assert.False(SpanTextOps.IsDigitsOnly(" 123 "));
+        }
+
+        [Fact]
+        public void IsInteger_ValidatesCorrectly()
+        {
+            Assert.True(SpanTextOps.IsInteger("123456"));
+            Assert.True(SpanTextOps.IsInteger("-123", allowNegative: true));
+            Assert.False(SpanTextOps.IsInteger("-123", allowNegative: false));
+            Assert.False(SpanTextOps.IsInteger("12.34"));
+            Assert.False(SpanTextOps.IsInteger("abc"));
+            Assert.False(SpanTextOps.IsInteger(""));
+        }
+
+        [Fact]
+        public void FastConvert_Round_WorksWithMultipleTypes()
+        {
+            Assert.Equal(12.35m, FastConvert.Round(12.3456m, 2));
+            Assert.Equal(12.35m, FastConvert.Round(12.3456d, 2));
+            Assert.Equal(12.00m, FastConvert.Round("12.004", 2));
+            Assert.Equal(0m, FastConvert.Round(null, 2));
+            Assert.Equal(0m, FastConvert.Round(DBNull.Value, 2));
+        }
     }
 }

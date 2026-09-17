@@ -184,6 +184,18 @@ namespace ZeroPrimitives
             return defaultValue;
         }
 
+        /// <summary>
+        /// Safely converts an object to decimal and rounds it to the specified decimal places.
+        /// Eliminates string allocation (value.ToString()) by unboxing directly or parsing spans.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static decimal Round(object? value, int decimalPlaces, MidpointRounding mode = MidpointRounding.AwayFromZero)
+        {
+            if (value == null || value == DBNull.Value) return 0m;
+            decimal dec = AsDecimal(value, 0m);
+            return Math.Round(dec, decimalPlaces, mode);
+        }
+
         #endregion
 
         #region Double & Float
