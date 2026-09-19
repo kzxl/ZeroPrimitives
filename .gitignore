@@ -17,3 +17,5 @@ dist/
 *.tmp
 *.bak
 TestResults/
+nupkgs/
+packages/
