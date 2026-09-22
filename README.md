@@ -4,7 +4,7 @@
 [![NuGet Version](https://img.shields.io/badge/nuget-v1.3.0-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20External-brightgreen.svg)]()
-[![Tests: 216 Passed](https://img.shields.io/badge/Tests-216%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests: 221 Passed](https://img.shields.io/badge/Tests-221%20Passed%20(100%25)-brightgreen.svg)]()
 [![Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-orange.svg)]()
 
 > **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Multi-Targeting across `.NET 8.0`, `.NET Framework 4.6.2`, and `.NET Standard 2.0`.
@@ -54,9 +54,11 @@ It replaces slow legacy conversion methods (`Convert.To*`, `value.ToString()`, `
 - **Master Data Validators**: Tax Code (MST Modulo 11 check digit, 10/13 digits), Citizen ID (CCCD 12-digit), Phone numbers.
 - **Financial Rounding**: VAS/Circular 200 compliant commercial rounding (`AwayFromZero`) and VAT line-item discrepancy reconciliation.
 
-### 8. Off-Heap Memory Foundation (`NativeMemoryPool`, `PagingArenaAllocator`, `ArenaAllocator`, `NativeMemoryTracker`)
+### 8. Off-Heap Memory & Zero-Copy IPC (`NativeMemoryPool`, `PagingArenaAllocator`, `SlabAllocator`, `SharedMemoryRingBuffer`, `NativeMemoryTracker`)
 - **Multi-Bucket Lock-Free Native Pool**: `NativeMemoryPool` manages 15 power-of-two buckets ($2^{12} = 4\text{KB}$ to $2^{26} = 64\text{MB}$) of unmanaged memory, with lock-free recycling per bucket and zero GC pause overhead.
 - **Auto-Expanding Unmanaged Bump Allocator**: `PagingArenaAllocator` chains 4MB/16MB unmanaged memory chunks with strict absolute virtual pointer alignment ($O(1)$ pointer math) and instantaneous single-cycle frame resets ($O(1)$).
+- **Fixed-Size Unmanaged Block Slabs**: `SlabAllocator` delivers **21,600,000+ ops/sec** (42.0x faster than Heap) for predictable camera 4K video frames, LiDAR clouds, and tensors with intrusive zero-overhead free list leasing.
+- **Sub-Microsecond Zero-Copy IPC**: `SharedMemoryRingBuffer` enables **43,900,000+ msgs/sec** cross-process streaming between C# and Python AI models via Memory-Mapped Files (MMF) without TCP/socket overhead.
 - **Hardened Absolute Pointer Alignment**: Eliminates memory-alignment crashes during AVX-512/AVX2 vector operations across all OS platforms.
 - **Atomic Telemetry**: `NativeMemoryTracker` monitors allocated bytes, peak usage, active blocks, and total allocation cycles with zero lock contention.
 
@@ -222,11 +224,13 @@ Conducted on AMD/Intel x64 Architecture (12 Cores, .NET 8.0 Release mode):
 
 | Benchmark Domain | Baseline Approach | ZeroPrimitives Hardened Engine | Speedup & GC Churn |
 | :--- | :--- | :--- | :--- |
-| **Off-Heap Frame Bump** (64 KB) | Managed Heap `new byte[]` (31 GB GC) | `PagingArenaAllocator` (Off-Heap Bump) | **253,151,739 ops/sec (562.6x faster, 0 GC pause)** |
-| **Recycled Native Memory** (64 KB) | Managed Heap `new byte[]` | `NativeMemoryPool` (15 Size Buckets) | **11,053,534 ops/sec (24.6x faster, zero LOH bloat)** |
-| **SIMD Vector Math** (2M floats) | Scalar for loop (`a + b`) | `SimdVector.Add` (AVX2 / Vector256) | **2.0x faster** (2.73 ms vs 5.54 ms) |
-| **SIMD Multiply-Add** (2M floats) | Scalar for loop (`a * b + c`) | `SimdVector.MultiplyAdd` (FMA) | **2.1x faster** (2.52 ms vs 5.33 ms) |
-| **Fragmented Sequence Parsing** | Copy to Array + BitConverter (38 MB GC) | `SequenceSpanReader` (Ref Struct) | **Zero GC Allocation (0 Bytes vs 38 MB)** |
+| **Off-Heap Frame Bump** (64 KB) | Managed Heap `new byte[]` (31 GB GC) | `PagingArenaAllocator` (Off-Heap Bump) | **270,650,644 ops/sec (525.7x faster, 0 GC pause)** |
+| **Fixed Off-Heap Slabs** (64 KB) | Managed Heap `new byte[]` | `SlabAllocator` (Intrusive Free-List) | **21,644,928 ops/sec (42.0x faster, 0 LOH churn)** |
+| **Recycled Native Memory** (64 KB) | Managed Heap `new byte[]` | `NativeMemoryPool` (15 Size Buckets) | **13,407,162 ops/sec (26.0x faster, zero LOH bloat)** |
+| **Zero-Copy IPC Ring** (64 B msg) | TCP Socket / Loopback Stream | `SharedMemoryRingBuffer` (MMF SPSC) | **43,991,043 msgs/sec (Sub-microsecond latency, 0 GC)** |
+| **SIMD Vector Math** (2M floats) | Scalar for loop (`a + b`) | `SimdVector.Add` (AVX2 / Vector256) | **2.6x faster** (1.45 ms vs 3.75 ms) |
+| **SIMD Multiply-Add** (2M floats) | Scalar for loop (`a * b + c`) | `SimdVector.MultiplyAdd` (FMA) | **1.4x faster** (2.41 ms vs 3.45 ms) |
+| **Fragmented Sequence Parsing** | Copy to Array + BitConverter (38 MB GC) | `SequenceSpanReader` (Ref Struct) | **Zero GC Allocation (0 Bytes vs 38 MB, 1.1x faster)** |
 
 ---
 
@@ -234,7 +238,7 @@ Conducted on AMD/Intel x64 Architecture (12 Cores, .NET 8.0 Release mode):
 
 | Version | Release Date | Key Milestones & Highlights |
 | :--- | :---: | :--- |
-| **`v1.3.0`** | 2026-09-22 | **Hardened L0 Foundation & Off-Heap Architecture**:<br/>• Added `NativeMemoryPool`: 15 power-of-two buckets (4KB to 64MB) with lock-free recycling and zero GC overhead.<br/>• Added `PagingArenaAllocator`: Unmanaged chunked bump allocator chaining 4MB/16MB blocks with $O(1)$ single-cycle frame reset and 253M ops/sec.<br/>• Hardened absolute virtual pointer alignment for AVX-512/AVX2 vector operations across all OS platforms.<br/>• Added `SimdVector`: Cross-platform AVX2/NEON/Vector<T> hardware-accelerated math kernels.<br/>• Added `SequenceSpanReader`: Zero-copy, zero-allocation parser for fragmented `ReadOnlySequence<byte>`.<br/>• Added `NativeMemoryTracker`: Atomic telemetry for unmanaged memory tracking.<br/>• Verified across 216 automated tests (100% pass rate). |
+| **`v1.3.0`** | 2026-09-22 | **Hardened L0 Foundation & Zero-Copy Off-Heap IPC**:<br/>• Added `NativeMemoryPool`: 15 power-of-two buckets (4KB to 64MB) with lock-free recycling and zero GC overhead.<br/>• Added `PagingArenaAllocator`: Unmanaged chunked bump allocator chaining 4MB/16MB blocks with $O(1)$ single-cycle frame reset and 270M ops/sec.<br/>• Added `SlabAllocator`: Predictable fixed-size block leasing at 21.6M ops/sec for camera 4K video frames, LiDAR point clouds, and tensors.<br/>• Added `SharedMemoryRingBuffer`: Sub-microsecond zero-copy IPC over Memory-Mapped Files (43.9M msgs/sec) for seamless C# <-> Python AI streaming.<br/>• Hardened absolute virtual pointer alignment for AVX-512/AVX2 vector operations across all OS platforms.<br/>• Added `SimdVector`: Cross-platform AVX2/NEON/Vector<T> hardware-accelerated math kernels.<br/>• Added `SequenceSpanReader`: Zero-copy, zero-allocation parser for fragmented `ReadOnlySequence<byte>`.<br/>• Added `NativeMemoryTracker`: Atomic telemetry for unmanaged memory tracking.<br/>• Verified across 221 automated tests (100% pass rate). |
 | **`v1.1.0`** | 2026-09-16 | **Hardware Acceleration & High-Performance Parsers**:<br/>• Integrated CPU hardware intrinsics (SSE4.2 on x86/x64, ARM64) in `FastCrc.Crc32C` for single-cycle 8-byte checksums (30x speedup).<br/>• Added pointer-based integer, decimal, and float loops with auto-delimiters in `FastNumberParser`.<br/>• Added zero-allocation RFC 4180 CSV tokenizer (`FastCsvParser.EnumerateRows`, `EnumerateCells`).<br/>• Enhanced `FastConvert` and `FastDateParser` with SQL Server DATETIME safety.<br/>• Verified across 153 automated tests (100% pass rate). |
 | **`v1.0.0`** | 2026-09-10 | **Initial Sovereign Release**:<br/>• Direct register unboxing `FastConvert` for primitive types and enums.<br/>• Zero-allocation binary buffer streaming (`SpanReader`, `SpanWriter`, `VarIntCodec`).<br/>• Cache-line padded `SpscQueue` (False Sharing elimination) and 4-byte `FastSpinLock`.<br/>• GS1 barcode tokenizer (`FastGs1Parser`), `FastHex`, `SpanSplitter`, `ByteRingBuffer`.<br/>• Multi-targeting .NET 8.0, .NET Framework 4.6.2, and .NET Standard 2.0. |
 

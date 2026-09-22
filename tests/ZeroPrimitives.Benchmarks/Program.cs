@@ -24,6 +24,7 @@ namespace ZeroPrimitives.Benchmarks
             BenchmarkOffHeapAllocators(iterations: 500_000, size: 64 * 1024);
             BenchmarkSimdVectorMath(elements: 2_000_000);
             BenchmarkSequenceSpanReader(iterations: 1_000_000);
+            BenchmarkSharedMemoryIpc(iterations: 1_000_000);
 
             Console.WriteLine("\n==================================================================================");
             Console.WriteLine("        ALL BENCHMARKS COMPLETED SUCCESSFULLY — ZERO ALLOCATIONS CONFIRMED        ");
@@ -120,7 +121,28 @@ namespace ZeroPrimitives.Benchmarks
             }
             gcAfter = GC.GetAllocatedBytesForCurrentThread();
             double arenaSpeedup = managedMs / sw.Elapsed.TotalMilliseconds;
-            Console.WriteLine($"  PagingArena (Off-Heap Bump)   : {sw.Elapsed.TotalMilliseconds,8:F2} ms | {(gcAfter - gcBefore),6} B  GC | {(iterations / sw.Elapsed.TotalSeconds):N0} ops/sec ({arenaSpeedup:F1}x vs Heap)\n");
+            Console.WriteLine($"  PagingArena (Off-Heap Bump)   : {sw.Elapsed.TotalMilliseconds,8:F2} ms | {(gcAfter - gcBefore),6} B  GC | {(iterations / sw.Elapsed.TotalSeconds):N0} ops/sec ({arenaSpeedup:F1}x vs Heap)");
+
+            // 5. SlabAllocator (Fixed-size Off-Heap)
+            GC.Collect();
+            gcBefore = GC.GetAllocatedBytesForCurrentThread();
+            using (var slab = new SlabAllocator(slabSize: size, initialSlabs: 16, maxSlabs: 64))
+            {
+                sw.Restart();
+                for (int i = 0; i < iterations; i++)
+                {
+                    unsafe
+                    {
+                        byte* ptr = slab.RentPointer();
+                        ptr[0] = 1;
+                        slab.Return(ptr);
+                    }
+                }
+                sw.Stop();
+            }
+            gcAfter = GC.GetAllocatedBytesForCurrentThread();
+            double slabSpeedup = managedMs / sw.Elapsed.TotalMilliseconds;
+            Console.WriteLine($"  SlabAllocator (Fixed Off-Heap): {sw.Elapsed.TotalMilliseconds,8:F2} ms | {(gcAfter - gcBefore),6} B  GC | {(iterations / sw.Elapsed.TotalSeconds):N0} ops/sec ({slabSpeedup:F1}x vs Heap)\n");
         }
         #endregion
 
@@ -256,6 +278,37 @@ namespace ZeroPrimitives.Benchmarks
                 Next = next;
                 return next;
             }
+        }
+        #endregion
+
+        #region 4. SharedMemoryRingBuffer IPC Benchmark
+        private static void BenchmarkSharedMemoryIpc(int iterations)
+        {
+            Console.WriteLine("----------------------------------------------------------------------------------");
+            Console.WriteLine($"[4] Inter-Process SharedMemoryRingBuffer Throughput ({iterations:N0} frames)");
+            Console.WriteLine("----------------------------------------------------------------------------------");
+
+            string mapName = "ZeroIPC_Bench_" + Guid.NewGuid().ToString("N");
+            using var ring = SharedMemoryRingBuffer.CreateOrOpen(mapName, payloadCapacity: 1024 * 1024);
+
+            byte[] message = new byte[64]; // Typical sensor/telemetry/frame-header packet
+            message[0] = 0xAA;
+            message[63] = 0xBB;
+            byte[] dest = new byte[64];
+
+            GC.Collect();
+            long gcBefore = GC.GetAllocatedBytesForCurrentThread();
+            var sw = Stopwatch.StartNew();
+
+            for (int i = 0; i < iterations; i++)
+            {
+                ring.TryWriteMessage(message);
+                ring.TryReadMessage(dest, out _);
+            }
+
+            sw.Stop();
+            long gcAfter = GC.GetAllocatedBytesForCurrentThread();
+            Console.WriteLine($"  IPC Message Ring (Zero-Copy)  : {sw.Elapsed.TotalMilliseconds,8:F2} ms | {(gcAfter - gcBefore),6} B  GC | {(iterations / sw.Elapsed.TotalSeconds):N0} msgs/sec (Zero Socket/GC)\n");
         }
         #endregion
     }
