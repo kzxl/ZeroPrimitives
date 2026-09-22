@@ -86,16 +86,17 @@ namespace ZeroPrimitives.Memory
             if ((alignment & (alignment - 1)) != 0 || alignment <= 0)
                 throw new ArgumentException("Alignment must be a positive power of two.", nameof(alignment));
 
-            int currentOffset = _offset;
-            int alignedOffset = (currentOffset + (alignment - 1)) & ~(alignment - 1);
+            byte* basePtr = _basePointer + _offset;
+            byte* alignedPtr = (byte*)(((nuint)basePtr + (nuint)(alignment - 1)) & ~(nuint)(alignment - 1));
+            int newOffset = (int)(alignedPtr - _basePointer) + size;
 
-            if (alignedOffset + size > _capacity)
+            if (newOffset > _capacity)
             {
-                throw new OutOfMemoryException($"Arena capacity exceeded. Requested {size} bytes (aligned at {alignedOffset}), but arena only has {_capacity - currentOffset} bytes remaining out of {_capacity}.");
+                throw new OutOfMemoryException($"Arena capacity exceeded. Requested {size} bytes, but arena only has {_capacity - _offset} bytes remaining out of {_capacity}.");
             }
 
-            _offset = alignedOffset + size;
-            return _basePointer + alignedOffset;
+            _offset = newOffset;
+            return alignedPtr;
         }
 
         /// <summary>

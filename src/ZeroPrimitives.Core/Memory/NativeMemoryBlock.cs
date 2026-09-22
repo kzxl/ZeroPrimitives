@@ -152,6 +152,26 @@ namespace ZeroPrimitives.Memory
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal byte* DangerousGetPointer() => _pointer;
+
+        /// <summary>
+        /// Explicitly frees the underlying native unmanaged memory regardless of disposal state.
+        /// Used by pool allocators during pool shutdown.
+        /// </summary>
+        internal void DestroyMemory()
+        {
+            if (_pointer != null)
+            {
+#if NET8_0_OR_GREATER
+                NativeMemory.Free(_pointer);
+#else
+                Marshal.FreeHGlobal((IntPtr)_pointer);
+#endif
+                _pointer = null;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ThrowIfDisposed()
         {
             if (IsDisposed)
