@@ -19,3 +19,4 @@ dist/
 TestResults/
 nupkgs/
 packages/
+.agents/
