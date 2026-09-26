@@ -34,6 +34,14 @@ namespace ZeroPrimitives.Simd
                 return;
 
             int uvWidth = (width + 1) / 2;
+            int uvHeight = (height + 1) / 2;
+            int requiredY = width * height;
+            int requiredUv = uvWidth * uvHeight;
+            int requiredDst = width * height * 3;
+
+            if (yPlane.Length < requiredY || uPlane.Length < requiredUv || vPlane.Length < requiredUv || rgbDestination.Length < requiredDst)
+                throw new ArgumentException("Input plane or destination buffer is too small for the specified image dimensions.");
+
 
             fixed (byte* pY = yPlane)
             fixed (byte* pU = uPlane)
@@ -140,6 +148,14 @@ namespace ZeroPrimitives.Simd
                 return;
 
             int uvStride = ((width + 1) / 2) * 2;
+            int uvHeight = (height + 1) / 2;
+            int requiredY = width * height;
+            int requiredUv = uvStride * uvHeight;
+            int requiredDst = width * height * 3;
+
+            if (yPlane.Length < requiredY || uvPlane.Length < requiredUv || rgbDestination.Length < requiredDst)
+                throw new ArgumentException("Input plane or destination buffer is too small for the specified image dimensions.");
+
 
             fixed (byte* pY = yPlane)
             fixed (byte* pUv = uvPlane)

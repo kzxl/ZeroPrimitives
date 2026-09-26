@@ -5,6 +5,8 @@ using Xunit;
 using ZeroPrimitives.Buffers;
 using ZeroPrimitives.Concurrency;
 using ZeroPrimitives.Diagnostics;
+using ZeroPrimitives.Mapping;
+using ZeroPrimitives.Simd;
 using ZeroPrimitives.Text;
 
 namespace ZeroPrimitives.Tests
@@ -408,6 +410,60 @@ namespace ZeroPrimitives.Tests
             Assert.Equal(threadCount * incrementsPerThread, counter);
         }
 
+        [Fact]
+        public void SpanWriter_EmptyString_ReturnsTrueAndZeroBytes()
+        {
+            Span<byte> buffer = stackalloc byte[32];
+            var writer = new SpanWriter(buffer);
+            bool success = writer.TryWriteStringUtf8(string.Empty.AsSpan(), out int bytesWritten);
+
+            Assert.True(success);
+            Assert.Equal(0, bytesWritten);
+            Assert.Equal(0, writer.Position);
+        }
+
+        [Fact]
+        public void SimdColorConverter_TooSmallBuffers_ThrowsArgumentException()
+        {
+            byte[] y = new byte[10];
+            byte[] u = new byte[5];
+            byte[] v = new byte[5];
+            byte[] dst = new byte[20];
+
+            Assert.Throws<ArgumentException>(() =>
+                SimdColorConverter.Yuv420pToRgb(y, u, v, dst, 100, 100));
+
+            Assert.Throws<ArgumentException>(() =>
+                SimdColorConverter.Nv12ToRgb(y, u, dst, 100, 100));
+        }
+
+        [Fact]
+        public void FastSpinLock_EnterScope_SynchronizesCorrectly()
+        {
+            var spinLock = new FastSpinLock();
+            int val = 0;
+
+            using (spinLock.EnterScope())
+            {
+                Assert.True(spinLock.IsHeld);
+                val = 42;
+            }
+
+            Assert.False(spinLock.IsHeld);
+            Assert.Equal(42, val);
+        }
+
+        [Fact]
+        public void FastTableBinary_NonZdtPayload_ReturnsEmptyDataTableSafely()
+        {
+            byte[] invalidPayload = new byte[] { 0x01, 0x02, 0x03, 0x04 };
+            var table = FastTableBinary.Deserialize(invalidPayload);
+
+            Assert.NotNull(table);
+            Assert.Equal(0, table.Rows.Count);
+        }
+
         #endregion
     }
 }
+

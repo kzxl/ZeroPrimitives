@@ -163,9 +163,10 @@ namespace ZeroPrimitives.Tests
             byte[] rgbDest = new byte[width * height * 3];
 
             // White color in YUV: Y = 235, U = 128, V = 128
-            Array.Fill(yPlane, (byte)235);
-            Array.Fill(uPlane, (byte)128);
-            Array.Fill(vPlane, (byte)128);
+            yPlane.AsSpan().Fill((byte)235);
+            uPlane.AsSpan().Fill((byte)128);
+            vPlane.AsSpan().Fill((byte)128);
+
 
             SimdColorConverter.Yuv420pToRgb(yPlane, uPlane, vPlane, rgbDest, width, height, isBgr: false);
 

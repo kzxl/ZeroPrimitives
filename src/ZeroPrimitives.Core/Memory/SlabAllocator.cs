@@ -275,13 +275,25 @@ namespace ZeroPrimitives.Memory
                 throw new ObjectDisposedException(nameof(SlabAllocator));
         }
 
+        ~SlabAllocator()
+        {
+            DisposeInternal();
+        }
+
         /// <summary>
         /// Releases all off-heap unmanaged memory allocated by this allocator.
         /// </summary>
         public void Dispose()
         {
+            DisposeInternal();
+            GC.SuppressFinalize(this);
+        }
+
+        private void DisposeInternal()
+        {
             if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
+
 
             lock (_growLock)
             {

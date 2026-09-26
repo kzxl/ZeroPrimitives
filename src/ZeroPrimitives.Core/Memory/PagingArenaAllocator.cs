@@ -196,7 +196,21 @@ namespace ZeroPrimitives.Memory
         /// <summary>
         /// Frees all unmanaged memory chunks and releases native resources back to the OS.
         /// </summary>
+        ~PagingArenaAllocator()
+        {
+            DisposeInternal();
+        }
+
+        /// <summary>
+        /// Frees all unmanaged memory chunks and releases native resources back to the OS.
+        /// </summary>
         public void Dispose()
+        {
+            DisposeInternal();
+            GC.SuppressFinalize(this);
+        }
+
+        private void DisposeInternal()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
@@ -214,3 +228,4 @@ namespace ZeroPrimitives.Memory
         }
     }
 }
+

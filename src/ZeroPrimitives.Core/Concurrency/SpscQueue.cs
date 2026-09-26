@@ -12,25 +12,30 @@ namespace ZeroPrimitives.Concurrency
     /// Uses unsigned 32-bit (uint) modular sequence arithmetic to guarantee perpetual wrap-around safety (zero integer overflow bugs even after billions of operations).
     /// </summary>
     /// <typeparam name="T">Element type.</typeparam>
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 128)]
+    internal struct SpscHeadSlot
+    {
+        [System.Runtime.InteropServices.FieldOffset(64)]
+        public uint Value;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 128)]
+    internal struct SpscTailSlot
+    {
+        [System.Runtime.InteropServices.FieldOffset(64)]
+        public uint Value;
+    }
+
     public sealed class SpscQueue<T>
     {
         private readonly T[] _buffer;
         private readonly uint _mask;
 
-        // Cache line padding before head (prevent false sharing with object header and buffer ref)
-        private long _pad0, _pad1, _pad2, _pad3, _pad4, _pad5, _pad6;
+        // Guaranteed physical 128-byte cache-line isolation preventing false sharing across all CLRs
+        private SpscHeadSlot _head;
+        private SpscTailSlot _tail;
 
-        // Consumed sequence - primarily updated by Consumer thread
-        private uint _head;
 
-        // Cache line padding between head and tail (guarantees head and tail reside on distinct 64-byte cache lines)
-        private long _pad7, _pad8, _pad9, _pad10, _pad11, _pad12, _pad13;
-
-        // Produced sequence - primarily updated by Producer thread
-        private uint _tail;
-
-        // Cache line padding after tail
-        private long _pad14, _pad15, _pad16, _pad17, _pad18, _pad19, _pad20;
 
         /// <summary>
         /// Initializes a new SPSC queue with a power-of-two capacity.
@@ -50,8 +55,8 @@ namespace ZeroPrimitives.Concurrency
 
             _buffer = new T[capacityPowerOfTwo];
             _mask = (uint)(capacityPowerOfTwo - 1);
-            _head = 0;
-            _tail = 0;
+            _head.Value = 0;
+            _tail.Value = 0;
         }
 
         public int Capacity
@@ -65,7 +70,7 @@ namespace ZeroPrimitives.Concurrency
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                uint count = Volatile.Read(ref _tail) - Volatile.Read(ref _head);
+                uint count = Volatile.Read(ref _tail.Value) - Volatile.Read(ref _head.Value);
                 return (int)count;
             }
         }
@@ -73,7 +78,7 @@ namespace ZeroPrimitives.Concurrency
         public bool IsEmpty
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => Volatile.Read(ref _head) == Volatile.Read(ref _tail);
+            get => Volatile.Read(ref _head.Value) == Volatile.Read(ref _tail.Value);
         }
 
         /// <summary>
@@ -83,13 +88,13 @@ namespace ZeroPrimitives.Concurrency
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryEnqueue(T item)
         {
-            uint tail = _tail;
-            uint head = Volatile.Read(ref _head);
+            uint tail = _tail.Value;
+            uint head = Volatile.Read(ref _head.Value);
 
             if ((tail - head) < (uint)_buffer.Length)
             {
                 _buffer[tail & _mask] = item;
-                Volatile.Write(ref _tail, tail + 1);
+                Volatile.Write(ref _tail.Value, tail + 1);
                 return true;
             }
 
@@ -103,15 +108,15 @@ namespace ZeroPrimitives.Concurrency
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryDequeue(out T item)
         {
-            uint head = _head;
-            uint tail = Volatile.Read(ref _tail);
+            uint head = _head.Value;
+            uint tail = Volatile.Read(ref _tail.Value);
 
             if (head != tail)
             {
                 uint index = head & _mask;
                 item = _buffer[index];
                 _buffer[index] = default!; // Allow GC collection of reference types
-                Volatile.Write(ref _head, head + 1);
+                Volatile.Write(ref _head.Value, head + 1);
                 return true;
             }
 
@@ -125,8 +130,8 @@ namespace ZeroPrimitives.Concurrency
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryPeek(out T item)
         {
-            uint head = _head;
-            uint tail = Volatile.Read(ref _tail);
+            uint head = _head.Value;
+            uint tail = Volatile.Read(ref _tail.Value);
 
             if (head != tail)
             {
@@ -139,3 +144,4 @@ namespace ZeroPrimitives.Concurrency
         }
     }
 }
+

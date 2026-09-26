@@ -5,10 +5,11 @@ using System.Threading;
 namespace ZeroPrimitives.Concurrency
 {
     /// <summary>
-    /// Ultra-lightweight (1-word, 4 bytes) spin-wait lock for sub-microsecond critical sections.
-    /// Eliminates OS thread scheduling, kernel transitions, and object header overhead of standard Monitor / lock(obj).
+    /// Ultra-lightweight spin-wait lock for sub-microsecond critical sections.
+    /// Implemented as a sealed class to eliminate silent compiler defensive-copying defects
+    /// while avoiding OS thread scheduling, kernel transitions, and object monitor overhead.
     /// </summary>
-    public struct FastSpinLock
+    public sealed class FastSpinLock
     {
         private int _state; // 0 = unlocked, 1 = locked
 
@@ -56,5 +57,27 @@ namespace ZeroPrimitives.Concurrency
         {
             Volatile.Write(ref _state, 0);
         }
+
+        /// <summary>
+        /// Enters the lock and returns an RAII scope for use with C# using statements.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Scope EnterScope()
+        {
+            Enter();
+            return new Scope(this);
+        }
+
+        public readonly ref struct Scope
+        {
+            private readonly FastSpinLock _lock;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public Scope(FastSpinLock @lock) => _lock = @lock;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Dispose() => _lock.Exit();
+        }
     }
 }
+

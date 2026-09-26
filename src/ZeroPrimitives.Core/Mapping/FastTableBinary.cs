@@ -125,26 +125,10 @@ namespace ZeroPrimitives.Mapping
                 return DeserializeZdt(raw);
             }
 
-            // Fallback for legacy BinaryFormatter payloads
-            try
-            {
-                byte[] raw = bytes.ToArray();
-                using var ms = new MemoryStream(raw);
-#if NET8_0_OR_GREATER
-                // In .NET 8+, BinaryFormatter is disabled by default
-                return new DataTable();
-#else
-#pragma warning disable SYSLIB0011
-                var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-                return (DataTable)formatter.Deserialize(ms);
-#pragma warning restore SYSLIB0011
-#endif
-            }
-            catch
-            {
-                return new DataTable();
-            }
+            // Non-ZDT payloads: BinaryFormatter fallback is permanently removed due to severe RCE vulnerability (CWE-502).
+            return new DataTable();
         }
+
 
         private static DataTable DeserializeZdt(byte[] bytes)
         {

@@ -164,7 +164,9 @@ namespace ZeroPrimitives.Memory
 #endif
                 _basePointer = null;
             }
+            GC.SuppressFinalize(this);
         }
+
 
         /// <summary>
         /// Finalizer ensures unmanaged memory is reclaimed if not disposed manually.

@@ -27,6 +27,16 @@ namespace ZeroPrimitives.Tests
             _output = output;
         }
 
+        private static long GetAllocatedBytes()
+        {
+#if NET8_0_OR_GREATER
+            return GC.GetAllocatedBytesForCurrentThread();
+#else
+            return GC.GetTotalMemory(false);
+#endif
+        }
+
+
         [Fact]
         public async Task Benchmark_AllComparativeScenarios_OutputsDetailedMetrics()
         {
@@ -48,7 +58,7 @@ namespace ZeroPrimitives.Tests
                 Convert.ToInt32(boxed);
                 FastConvert.AsInt(boxed);
 
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 int sumBcl = 0;
                 for (int i = 0; i < iterations; i++)
@@ -56,9 +66,9 @@ namespace ZeroPrimitives.Tests
                     sumBcl += Convert.ToInt32(boxed);
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 int sumZp = 0;
                 for (int i = 0; i < iterations; i++)
@@ -66,7 +76,7 @@ namespace ZeroPrimitives.Tests
                     sumZp += FastConvert.AsInt(boxed);
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 Assert.Equal(sumBcl, sumZp);
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
@@ -87,7 +97,7 @@ namespace ZeroPrimitives.Tests
                 decimal.TryParse(price, NumberStyles.Currency, CultureInfo.InvariantCulture, out _);
                 FastConvert.AsDecimal(price);
 
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 decimal sumBcl = 0m;
                 for (int i = 0; i < iterations; i++)
@@ -96,9 +106,9 @@ namespace ZeroPrimitives.Tests
                         sumBcl += val;
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 decimal sumZp = 0m;
                 for (int i = 0; i < iterations; i++)
@@ -106,7 +116,7 @@ namespace ZeroPrimitives.Tests
                     sumZp += FastConvert.AsDecimal(price);
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 Assert.Equal(sumBcl, sumZp);
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
@@ -123,7 +133,7 @@ namespace ZeroPrimitives.Tests
                 const int iterations = 50_000;
                 string csvLine = "1001,\"MDS-SP-ITEM\",150.5,2026-09-15,\"ACTIVE\"";
 
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 int countBcl = 0;
                 for (int i = 0; i < iterations; i++)
@@ -132,9 +142,9 @@ namespace ZeroPrimitives.Tests
                     countBcl += parts.Length;
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 int countZp = 0;
                 for (int i = 0; i < iterations; i++)
@@ -145,7 +155,7 @@ namespace ZeroPrimitives.Tests
                     }
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
                 sb.AppendLine(string.Format("{0,-32} | {1,-22} | {2,-22} | {3,-12} | {4,-10}",
@@ -167,7 +177,7 @@ namespace ZeroPrimitives.Tests
                 w.WriteSingleLittleEndian(45.5f);
                 w.WriteInt16LittleEndian(20);
 
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 long sumBcl = 0;
                 for (int i = 0; i < iterations; i++)
@@ -181,9 +191,9 @@ namespace ZeroPrimitives.Tests
                     sumBcl += br.ReadInt16();
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 long sumZp = 0;
                 for (int i = 0; i < iterations; i++)
@@ -196,7 +206,7 @@ namespace ZeroPrimitives.Tests
                     sumZp += reader.ReadInt16LittleEndian();
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 Assert.Equal(sumBcl, sumZp);
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
@@ -213,7 +223,7 @@ namespace ZeroPrimitives.Tests
                 const int iterations = 50_000;
                 string col = "AZ";
 
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 int lenBcl = 0;
                 for (int i = 0; i < iterations; i++)
@@ -222,9 +232,9 @@ namespace ZeroPrimitives.Tests
                     lenBcl += s.Length;
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 int lenZp = 0;
                 var span = col.AsSpan();
@@ -237,7 +247,7 @@ namespace ZeroPrimitives.Tests
                     }
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
                 sb.AppendLine(string.Format("{0,-32} | {1,-22} | {2,-22} | {3,-12} | {4,-10}",
@@ -254,7 +264,7 @@ namespace ZeroPrimitives.Tests
                 const int totalItems = 100_000;
 
                 // ConcurrentQueue
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 var cq = new ConcurrentQueue<int>();
                 var p1 = Task.Run(() => { for (int i = 0; i < totalItems; i++) cq.Enqueue(i); });
@@ -265,10 +275,10 @@ namespace ZeroPrimitives.Tests
                 });
                 await Task.WhenAll(p1, c1);
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
                 // ZeroPrimitives SpscQueue
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 var spsc = new SpscQueue<int>(1024);
                 var p2 = Task.Run(() =>
@@ -289,7 +299,7 @@ namespace ZeroPrimitives.Tests
                 });
                 await Task.WhenAll(p2, c2);
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
                 sb.AppendLine(string.Format("{0,-32} | {1,-22} | {2,-22} | {3,-12} | {4,-10}",
@@ -307,7 +317,7 @@ namespace ZeroPrimitives.Tests
                 for (int i = 0; i < payload.Length; i++) payload[i] = (byte)i;
 
                 // Traditional Software Bitwise CRC
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 uint sumBcl = 0;
                 for (int i = 0; i < iterations; i++)
@@ -322,10 +332,10 @@ namespace ZeroPrimitives.Tests
                     sumBcl += crc;
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
                 // ZeroPrimitives Hardware-Accelerated CRC32C
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 uint sumZp = 0;
                 for (int i = 0; i < iterations; i++)
@@ -333,7 +343,7 @@ namespace ZeroPrimitives.Tests
                     sumZp += FastCrc.Crc32C(payload);
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
                 sb.AppendLine(string.Format("{0,-32} | {1,-22} | {2,-22} | {3,-12} | {4,-10}",
@@ -351,7 +361,7 @@ namespace ZeroPrimitives.Tests
                 byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
 
                 // System.Text.Json JsonDocument
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 int sumIdBcl = 0;
                 for (int i = 0; i < iterations; i++)
@@ -360,10 +370,10 @@ namespace ZeroPrimitives.Tests
                     sumIdBcl += doc.RootElement.GetProperty("id").GetInt32();
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
                 // ZeroPrimitives FastJsonReader
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 int sumIdZp = 0;
                 for (int i = 0; i < iterations; i++)
@@ -382,7 +392,7 @@ namespace ZeroPrimitives.Tests
                     }
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 Assert.Equal(sumIdBcl, sumIdZp);
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
@@ -405,7 +415,7 @@ namespace ZeroPrimitives.Tests
                 FastHex.Encode(epcBytes, warmBuf);
 
                 // BitConverter + Replace
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 int hashBcl = 0;
                 for (int i = 0; i < iterations; i++)
@@ -414,10 +424,10 @@ namespace ZeroPrimitives.Tests
                     hashBcl += s.Length;
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
                 // ZeroPrimitives FastHex
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 int hashZp = 0;
                 Span<char> hexChars = stackalloc char[24];
@@ -426,7 +436,7 @@ namespace ZeroPrimitives.Tests
                     hashZp += FastHex.Encode(epcBytes, hexChars);
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 Assert.Equal(hashBcl, hashZp);
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
@@ -448,7 +458,7 @@ namespace ZeroPrimitives.Tests
                 foreach (var _ in config.AsSpan().SplitFast(';')) { }
 
                 // string.Split
-                long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memBclBefore = GetAllocatedBytes();
                 var swBcl = Stopwatch.StartNew();
                 int totalTokensBcl = 0;
                 for (int i = 0; i < iterations; i++)
@@ -457,10 +467,10 @@ namespace ZeroPrimitives.Tests
                     totalTokensBcl += parts.Length;
                 }
                 swBcl.Stop();
-                long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
+                long memBcl = GetAllocatedBytes() - memBclBefore;
 
                 // ZeroPrimitives SpanSplitter
-                long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
+                long memZpBefore = GetAllocatedBytes();
                 var swZp = Stopwatch.StartNew();
                 int totalTokensZp = 0;
                 for (int i = 0; i < iterations; i++)
@@ -471,7 +481,7 @@ namespace ZeroPrimitives.Tests
                     }
                 }
                 swZp.Stop();
-                long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
+                long memZp = GetAllocatedBytes() - memZpBefore;
 
                 Assert.Equal(totalTokensBcl, totalTokensZp);
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);

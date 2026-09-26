@@ -546,6 +546,12 @@ namespace ZeroPrimitives.Buffers
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryWriteStringUtf8(ReadOnlySpan<char> chars, out int bytesWritten)
         {
+            if (chars.IsEmpty)
+            {
+                bytesWritten = 0;
+                return true;
+            }
+
 #if NET8_0_OR_GREATER
             if (Encoding.UTF8.TryGetBytes(chars, RemainingSpan, out bytesWritten))
             {
@@ -557,9 +563,16 @@ namespace ZeroPrimitives.Buffers
 #else
             string s = chars.ToString();
             byte[] bytes = Encoding.UTF8.GetBytes(s);
-            return TryWriteBytes(bytes) ? ((bytesWritten = bytes.Length) > 0) : ((bytesWritten = 0) == 1);
+            if (TryWriteBytes(bytes))
+            {
+                bytesWritten = bytes.Length;
+                return true;
+            }
+            bytesWritten = 0;
+            return false;
 #endif
         }
+
 
         #endregion
 
