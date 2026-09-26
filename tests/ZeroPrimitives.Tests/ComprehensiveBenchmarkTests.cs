@@ -15,7 +15,6 @@ using ZeroPrimitives.Cryptography;
 using ZeroPrimitives.Extensions;
 using ZeroPrimitives.Parsing;
 using ZeroPrimitives.Text;
-using ZeroPrimitives.Validation;
 
 namespace ZeroPrimitives.Tests
 {
@@ -209,20 +208,18 @@ namespace ZeroPrimitives.Tests
                     $"{FormatBytes(Math.Max(0, memBcl - memZp))}"));
             }
 
-            // 5. Vietnamese Text Normalization (50,000 texts)
+            // 5. Alpha Sequence Generation (50,000 iterations)
             {
                 const int iterations = 50_000;
-                string text = "Đơn Hàng Xuất Kho / Bán Lẻ - Mã Phiếu: 12345 (Hà Nội)";
-                var regex = new Regex(@"\p{IsCombiningDiacriticalMarks}+", RegexOptions.Compiled);
+                string col = "AZ";
 
                 long memBclBefore = GC.GetAllocatedBytesForCurrentThread();
                 var swBcl = Stopwatch.StartNew();
                 int lenBcl = 0;
                 for (int i = 0; i < iterations; i++)
                 {
-                    string normalized = text.Normalize(NormalizationForm.FormD);
-                    string noAccent = regex.Replace(normalized, string.Empty).Replace('đ', 'd').Replace('Đ', 'd').ToLower();
-                    lenBcl += noAccent.Length;
+                    string s = col + i.ToString();
+                    lenBcl += s.Length;
                 }
                 swBcl.Stop();
                 long memBcl = GC.GetAllocatedBytesForCurrentThread() - memBclBefore;
@@ -230,24 +227,27 @@ namespace ZeroPrimitives.Tests
                 long memZpBefore = GC.GetAllocatedBytesForCurrentThread();
                 var swZp = Stopwatch.StartNew();
                 int lenZp = 0;
-                var span = text.AsSpan();
-                Span<char> buf = stackalloc char[span.Length];
+                var span = col.AsSpan();
+                Span<char> buf = stackalloc char[8];
                 for (int i = 0; i < iterations; i++)
                 {
-                    int written = VietnameseSearchNormalizer.NormalizeForSearch(span, buf);
-                    lenZp += written;
+                    if (AlphaSequence.TryIncrement(span, buf, out int written))
+                    {
+                        lenZp += written;
+                    }
                 }
                 swZp.Stop();
                 long memZp = GC.GetAllocatedBytesForCurrentThread() - memZpBefore;
 
                 double speedup = (double)Math.Max(swBcl.ElapsedTicks, 1) / Math.Max(swZp.ElapsedTicks, 1);
                 sb.AppendLine(string.Format("{0,-32} | {1,-22} | {2,-22} | {3,-12} | {4,-10}",
-                    "5. VN Text Normalizer (50k)",
+                    "5. Alpha Sequence (50k)",
                     $"{swBcl.ElapsedMilliseconds} ms ({FormatBytes(memBcl)})",
                     $"{swZp.ElapsedMilliseconds} ms ({FormatBytes(memZp)})",
                     $"{speedup:F1}x Faster",
                     $"{FormatBytes(Math.Max(0, memBcl - memZp))}"));
             }
+
 
             // 6. Concurrent Producer-Consumer Queue (100,000 items)
             {

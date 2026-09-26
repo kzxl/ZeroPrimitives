@@ -4,7 +4,7 @@
 [![NuGet Version](https://img.shields.io/badge/nuget-v1.3.0-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20External-brightgreen.svg)]()
-[![Tests: 221 Passed](https://img.shields.io/badge/Tests-221%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests: 193 Passed](https://img.shields.io/badge/Tests-193%20Passed%20(100%25)-brightgreen.svg)]()
 [![Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-orange.svg)]()
 
 > **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Multi-Targeting across `.NET 8.0`, `.NET Framework 4.6.2`, and `.NET Standard 2.0`.
@@ -49,12 +49,7 @@ It replaces slow legacy conversion methods (`Convert.To*`, `value.ToString()`, `
 - **Industrial Checksums**: `Crc16Modbus` (RS485/scales/PLCs), `Crc16Ccitt`, and `Crc32` (IEEE 802.3 Ethernet/ZIP).
 - **Hashing**: Ultra-fast 32/64-bit `FNV-1a`, plus zero-allocation `Md5Hex`, `Sha1Hex`, `Sha256Hex`.
 
-### 7. Vietnamese Enterprise Master Data & Finance (`VietnameseSearchNormalizer`, `VnMasterDataValidators`, `VnFinancialRounding`)
-- **Diacritic Normalization & SEO Slugs**: `VietnameseSearchNormalizer.NormalizeForSearch` and `ToSlug` strip accents, normalize `Đ/đ` to `d`, and format search tokens directly on stack spans.
-- **Master Data Validators**: Tax Code (MST Modulo 11 check digit, 10/13 digits), Citizen ID (CCCD 12-digit), Phone numbers.
-- **Financial Rounding**: VAS/Circular 200 compliant commercial rounding (`AwayFromZero`) and VAT line-item discrepancy reconciliation.
-
-### 8. Off-Heap Memory & Zero-Copy IPC (`NativeMemoryPool`, `PagingArenaAllocator`, `SlabAllocator`, `SharedMemoryRingBuffer`, `NativeMemoryTracker`)
+### 7. Off-Heap Memory & Zero-Copy IPC (`NativeMemoryPool`, `PagingArenaAllocator`, `SlabAllocator`, `SharedMemoryRingBuffer`, `NativeMemoryTracker`)
 - **Multi-Bucket Lock-Free Native Pool**: `NativeMemoryPool` manages 15 power-of-two buckets ($2^{12} = 4\text{KB}$ to $2^{26} = 64\text{MB}$) of unmanaged memory, with lock-free recycling per bucket and zero GC pause overhead.
 - **Auto-Expanding Unmanaged Bump Allocator**: `PagingArenaAllocator` chains 4MB/16MB unmanaged memory chunks with strict absolute virtual pointer alignment ($O(1)$ pointer math) and instantaneous single-cycle frame resets ($O(1)$).
 - **Fixed-Size Unmanaged Block Slabs**: `SlabAllocator` delivers **21,600,000+ ops/sec** (42.0x faster than Heap) for predictable camera 4K video frames, LiDAR clouds, and tensors with intrusive zero-overhead free list leasing.
@@ -62,22 +57,23 @@ It replaces slow legacy conversion methods (`Convert.To*`, `value.ToString()`, `
 - **Hardened Absolute Pointer Alignment**: Eliminates memory-alignment crashes during AVX-512/AVX2 vector operations across all OS platforms.
 - **Atomic Telemetry**: `NativeMemoryTracker` monitors allocated bytes, peak usage, active blocks, and total allocation cycles with zero lock contention.
 
-### 9. Hexadecimal & Low-Level Codecs (`FastHex`)
+### 8. Hexadecimal & Low-Level Codecs (`FastHex`)
 - **Zero-Allocation Hex Encoder/Decoder**: `FastHex.Encode`, `FastHex.Decode`, `FastHex.TryDecode`, `FastHex.ToString`, and `FastHex.IsValid`.
 - **RFID & IoT Native**: Converts 12-byte/24-character EPC/TID strings without intermediate heap allocations across `.NET Standard 2.0`, `.NET 4.6.2`, and `.NET 8.0`.
 
-### 10. Zero-Allocation Tokenizer (`SpanSplitter`)
+### 9. Zero-Allocation Tokenizer (`SpanSplitter`)
 - **Allocation-Free String Splitting**: `span.SplitFast(';')`, `str.SplitFast(';')`, and string delimiter `span.SplitFast("::")` using ref struct enumerators.
 - **Binary Frame Splitting**: `span.SplitFast((byte)0x00)` for network byte streams without allocating arrays.
 
-### 11. Cross-Platform Bit Manipulation (`BitOps`)
+### 10. Cross-Platform Bit Manipulation (`BitOps`)
 - **Hardware-Accelerated Bit Operations**: Parity with `System.Numerics.BitOperations` on `.NET Standard 2.0` and `.NET 4.6.2`.
 - **Operations**: `PopCount`, `LeadingZeroCount` (LZCNT), `TrailingZeroCount` (TZCNT), `RotateLeft`, `RotateRight`, `IsPowerOfTwo`, `RoundUpToPowerOfTwo`.
 
-### 12. Streaming Buffers & Diagnostics (`ArrayPoolBufferWriter`, `ByteRingBuffer`, `ValueStopwatch`)
+### 11. Streaming Buffers & Diagnostics (`ArrayPoolBufferWriter`, `ByteRingBuffer`, `ValueStopwatch`)
 - **ArrayPoolBufferWriter<T>**: `IBufferWriter<T>` renting from `ArrayPool<T>.Shared` to prevent Large Object Heap (LOH) fragmentation during report export.
 - **ByteRingBuffer**: Circular byte buffer for TCP sockets and Serial COM ports without memory shifting (`Array.Copy`).
 - **ValueStopwatch**: Zero-allocation `readonly struct` for microsecond latency profiling.
+
 
 ### 13. Cross-Platform SIMD Hardware Acceleration (`SimdVector`)
 - **Universal SIMD Kernels**: Vectorized primitives for `float` arrays leveraging `Vector256<float>` / `Vector128<float>` on .NET 8.0 with graceful fallback to `System.Numerics.Vector<T>` on older runtimes.
@@ -141,7 +137,7 @@ The following benchmarks were executed under release compilation (`-c Release`),
 | **Unboxing & Cast** | 100,000 ops | 0 ms (40 B) | **0 ms** (40 B) | **3.3x Faster** | Direct Register Cast |
 | **Hex RFID EPC Encode** | 50,000 tags | 14 ms (8.0 MB) | **5 ms** (40 B) | **2.7x Faster** | **8.0 MB (100% Saved)** |
 | **SPSC Queue** | 100,000 items | 7 ms (ConcurrentQueue) | **2 ms** (Lock-free) | **2.6x Faster** | Zero False-Sharing Padding |
-| **VN Search Normalizer** | 50,000 texts | 115 ms (25.6 MB) | **72 ms** (40 B) | **1.6x Faster** | **25.6 MB (100% Saved)** |
+| **Alpha Sequence Generator** | 50,000 runs | 8 ms (1.2 MB) | **4 ms** (40 B) | **2.0x Faster** | **1.2 MB (100% Saved)** |
 | **SpanSplitter Tokenizer** | 50,000 lines | 9 ms (17.2 MB) | **6 ms** (40 B) | **1.5x Faster** | **17.2 MB (100% Saved)** |
 | **Delimited CSV Parse (RFC 4180)** | 50,000 lines | 11 ms (12.6 MB) | **11 ms** (40 B) | **1.1x Faster** | **12.6 MB (100% Saved)** |
 | **Binary Packet Read** | 50,000 pkts | 4 ms (10.7 MB) | **5 ms** (40 B) | Zero GC Pause | **10.7 MB (100% Saved)** |
