@@ -199,6 +199,8 @@ namespace ZeroPrimitives.Memory
 #endif
                 _pointer = null;
             }
+
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>

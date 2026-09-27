@@ -9,9 +9,9 @@ namespace ZeroPrimitives.Buffers
     /// Guarantees that rented memory is automatically returned to the shared pool on exiting the 'using' scope.
     /// Zero heap allocation.
     /// </summary>
-    public readonly ref struct ArrayPoolRentScope<T>
+    public ref struct ArrayPoolRentScope<T>
     {
-        private readonly T[]? _rentedArray;
+        private T[]? _rentedArray;
         private readonly int _length;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -60,9 +60,11 @@ namespace ZeroPrimitives.Buffers
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
-            if (_rentedArray != null)
+            T[]? array = _rentedArray;
+            _rentedArray = null;
+            if (array != null)
             {
-                ArrayPool<T>.Shared.Return(_rentedArray, clearArray: false);
+                ArrayPool<T>.Shared.Return(array, clearArray: false);
             }
         }
     }

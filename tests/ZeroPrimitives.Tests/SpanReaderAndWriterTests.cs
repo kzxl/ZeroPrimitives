@@ -59,5 +59,38 @@ namespace ZeroPrimitives.Tests
             }
             // Disposed without exception
         }
+
+        [Fact]
+        public void ArrayPoolRentScope_DoubleDispose_IsIdempotentAndDoesNotThrow()
+        {
+            var scope = ArrayPoolRentScope<byte>.Rent(128);
+            Assert.NotNull(scope.RawArray);
+            Assert.False(scope.Span.IsEmpty);
+
+            // First dispose
+            scope.Dispose();
+            Assert.Null(scope.RawArray);
+            Assert.True(scope.Span.IsEmpty);
+
+            // Second dispose (must be completely idempotent and not corrupt ArrayPool)
+            scope.Dispose();
+            Assert.Null(scope.RawArray);
+
+            // Third dispose
+            scope.Dispose();
+
+            // Explicit dispose inside using block
+            using (var scopeInUsing = ArrayPoolRentScope<byte>.Rent(64))
+            {
+                scopeInUsing.Dispose();
+                Assert.Null(scopeInUsing.RawArray);
+                // Exit of using block calls Dispose() a second time
+            }
+
+            // Zero-length scope dispose
+            var zeroScope = ArrayPoolRentScope<byte>.Rent(0);
+            zeroScope.Dispose();
+            zeroScope.Dispose();
+        }
     }
 }

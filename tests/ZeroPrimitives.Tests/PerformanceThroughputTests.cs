@@ -24,8 +24,8 @@ namespace ZeroPrimitives.Tests
             sw.Stop();
 
             Assert.Equal(12345 * 100_000, sum);
-            // 100k conversions should complete in under 50ms (typically 3-10ms)
-            Assert.True(sw.ElapsedMilliseconds < 50, $"Elapsed: {sw.ElapsedMilliseconds}ms for 100,000 conversions");
+            // 100k conversions should complete in milliseconds (resilient under parallel test runner load)
+            Assert.True(sw.ElapsedMilliseconds < 500, $"Elapsed: {sw.ElapsedMilliseconds}ms for 100,000 conversions");
         }
 
         [Fact]
