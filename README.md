@@ -1,10 +1,10 @@
 # ZeroPrimitives
 
 [![ZeroPlatform Tier](https://img.shields.io/badge/ZeroPlatform-Tier%200%20(Core%20Foundation)-0284c7.svg)](https://github.com/kzxl/ZeroPlatform)
-[![NuGet Version](https://img.shields.io/badge/nuget-v1.4.0-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
+[![NuGet Version](https://img.shields.io/badge/nuget-v1.4.1-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20External-brightgreen.svg)]()
-[![Tests: 206 Passed](https://img.shields.io/badge/Tests-206%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests: 211 Passed](https://img.shields.io/badge/Tests-211%20Passed%20(100%25)-brightgreen.svg)]()
 [![Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-orange.svg)]()
 
 > **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Multi-Targeting across `.NET 8.0`, `.NET Framework 4.6.2`, and `.NET Standard 2.0`.
