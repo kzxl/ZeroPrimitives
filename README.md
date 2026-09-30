@@ -1,10 +1,10 @@
 # ZeroPrimitives
 
 [![ZeroPlatform Tier](https://img.shields.io/badge/ZeroPlatform-Tier%200%20(Core%20Foundation)-0284c7.svg)](https://github.com/kzxl/ZeroPlatform)
-[![NuGet Version](https://img.shields.io/badge/nuget-v1.6.0-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
+[![NuGet Version](https://img.shields.io/badge/nuget-v1.7.0-blue.svg)](https://www.nuget.org/packages/ZeroPrimitives.Core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zero External Dependencies](https://img.shields.io/badge/Dependencies-0%20External-brightgreen.svg)]()
-[![Tests: 228 Passed](https://img.shields.io/badge/Tests-228%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests: 232 Passed](https://img.shields.io/badge/Tests-232%20Passed%20(100%25)-brightgreen.svg)]()
 [![Multi-Targeting](https://img.shields.io/badge/.NET-8.0%20%7C%204.6.2%20%7C%20Standard%202.0-orange.svg)]()
 
 > **Architectural Standard**: 100% Pure C#, Zero External Dependencies, Multi-Targeting across `.NET 8.0`, `.NET Framework 4.6.2`, and `.NET Standard 2.0`.
@@ -49,7 +49,8 @@ It replaces slow legacy conversion methods (`Convert.To*`, `value.ToString()`, `
 - **Industrial Checksums**: `Crc16Modbus` (RS485/scales/PLCs), `Crc16Ccitt`, and `Crc32` (IEEE 802.3 Ethernet/ZIP).
 - **Hashing**: Ultra-fast 32/64-bit `FNV-1a`, plus zero-allocation `Md5Hex`, `Sha1Hex`, `Sha256Hex`.
 
-### 7. Off-Heap Memory & Zero-Copy IPC (`NativeMemoryPool`, `PagingArenaAllocator`, `SlabAllocator`, `SharedMemoryRingBuffer`, `NativeMemoryTracker`)
+### 7. Off-Heap Memory & Zero-Copy IPC (`NativeMemoryPool`, `PagingArenaAllocator`, `SlabAllocator`, `StructArenaPool`, `SharedMemoryRingBuffer`, `NativeMemoryTracker`)
+- **Polymorphic Unmanaged Struct Pooling**: `StructArenaPool` provides zero-allocation, off-heap pooling for heterogeneous unmanaged structs (telemetry packets, spatial 3D points, matrix transforms) completely eliminating CLR object boxing, with stack-scoped `StructLease<T>` and type-erased `StructEnvelope` leasing.
 - **Multi-Bucket Lock-Free Native Pool**: `NativeMemoryPool` manages 15 power-of-two buckets ($2^{12} = 4\text{KB}$ to $2^{26} = 64\text{MB}$) of unmanaged memory, with lock-free recycling per bucket and zero GC pause overhead.
 - **Auto-Expanding Unmanaged Bump Allocator**: `PagingArenaAllocator` chains 4MB/16MB unmanaged memory chunks with strict absolute virtual pointer alignment ($O(1)$ pointer math) and instantaneous single-cycle frame resets ($O(1)$).
 - **Fixed-Size Unmanaged Block Slabs**: `SlabAllocator` delivers **21,600,000+ ops/sec** (42.0x faster than Heap) for predictable camera 4K video frames, LiDAR clouds, and tensors with intrusive zero-overhead free list leasing.
